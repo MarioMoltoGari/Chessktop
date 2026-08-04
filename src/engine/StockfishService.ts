@@ -11,7 +11,7 @@ type ErrorListener = (
 ) => void;
 
 const WORKER_URL =
-    "/stockfish/stockfish-18-lite-single.js";
+    `${import.meta.env.BASE_URL}stockfish/stockfish-18-lite-single.js`;
 
 export default class StockfishService {
     private worker: Worker | null = null;
