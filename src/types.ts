@@ -26,3 +26,15 @@ export type MoveRow = {
   whiteMove?: MoveNode;
   blackMove?: MoveNode;
 };
+
+export type StudyContent = {
+  studyId: string;
+  nodes: NodesMap;
+  currentNodeId: string;
+  updatedAt: string;
+};
+
+export type StudyContentsMap = Record<
+  string,
+  StudyContent
+>;

@@ -4,7 +4,21 @@ import { Chessboard } from "react-chessboard";
 import "./App.css";
 import LibrarySidebar from "./components/LibrarySidebar";
 import { initialLibraryState } from "./data/initialLibrary";
-import type { LibraryState } from "./types/library";
+import type {
+  StudyContent,
+  StudyContentsMap,
+} from "./types";
+import type {
+  ChessktopStorage,
+  LibraryState,
+} from "./types/library";
+import {
+  createEmptyStudyContent,
+} from "./utils/chessTree";
+import {
+  loadChessktopState,
+  saveChessktopState,
+} from "./utils/storage";
 // import "./styles/library-sidebar.css";
 
 type MoveNode = {
@@ -390,16 +404,90 @@ function createInitialNodes(): NodesMap {
   };
 }
 
-function App() {
-  const [library, setLibrary] =
-    useState<LibraryState>(
-      initialLibraryState,
+type InitialAppState = {
+  library: LibraryState;
+  studyContents: StudyContentsMap;
+  selectedStudyId: string | null;
+  activeContent: StudyContent | null;
+};
+
+function createInitialAppState():
+  InitialAppState {
+  const storedState =
+    loadChessktopState();
+
+  const library =
+    storedState?.library ??
+    initialLibraryState;
+
+  let selectedStudyId =
+    storedState?.selectedStudyId ?? null;
+
+  const selectedStudyExists =
+    selectedStudyId !== null &&
+    library.studies.some(
+      (study) =>
+        study.id === selectedStudyId,
     );
 
-  const [selectedStudyId, setSelectedStudyId] =
-    useState<string | null>(
-      initialLibraryState.studies[0]?.id ?? null,
+  if (!selectedStudyExists) {
+    selectedStudyId =
+      library.studies[0]?.id ?? null;
+  }
+
+  const studyContents =
+    storedState?.studyContents ?? {};
+
+  if (!selectedStudyId) {
+    return {
+      library,
+      studyContents,
+      selectedStudyId: null,
+      activeContent: null,
+    };
+  }
+
+  const activeContent =
+    studyContents[selectedStudyId] ??
+    createEmptyStudyContent(
+      selectedStudyId,
     );
+
+  return {
+    library,
+    studyContents: {
+      ...studyContents,
+      [selectedStudyId]:
+        activeContent,
+    },
+    selectedStudyId,
+    activeContent,
+  };
+}
+
+function App() {
+  const [initialState] = useState(
+    createInitialAppState,
+  );
+
+  const [library, setLibrary] =
+    useState<LibraryState>(
+      initialState.library,
+    );
+
+  const [
+    selectedStudyId,
+    setSelectedStudyId,
+  ] = useState<string | null>(
+    initialState.selectedStudyId,
+  );
+
+  const [
+    studyContents,
+    setStudyContents,
+  ] = useState<StudyContentsMap>(
+    initialState.studyContents,
+  );
 
   const selectedStudy =
     library.studies.find(
@@ -408,10 +496,18 @@ function App() {
     ) ?? null;
 
   const [nodes, setNodes] =
-    useState<NodesMap>(createInitialNodes);
+    useState<NodesMap>(
+      initialState.activeContent?.nodes ??
+      createInitialNodes(),
+    );
 
-  const [currentNodeId, setCurrentNodeId] =
-    useState("root");
+  const [
+    currentNodeId,
+    setCurrentNodeId,
+  ] = useState(
+    initialState.activeContent
+      ?.currentNodeId ?? "root",
+  );
 
   const [pgnCopied, setPgnCopied] =
     useState(false);
@@ -464,6 +560,146 @@ function App() {
       ),
     [mainLine],
   );
+
+  useEffect(() => {
+    if (!selectedStudyId) {
+      return;
+    }
+
+    setStudyContents(
+      (previousContents) => ({
+        ...previousContents,
+
+        [selectedStudyId]: {
+          studyId: selectedStudyId,
+          nodes,
+          currentNodeId,
+          updatedAt:
+            new Date().toISOString(),
+        },
+      }),
+    );
+  }, [
+    selectedStudyId,
+    nodes,
+    currentNodeId,
+  ]);
+
+  useEffect(() => {
+    const stateToSave: ChessktopStorage = {
+      version: 1,
+      library,
+      studyContents,
+      selectedStudyId,
+    };
+
+    saveChessktopState(stateToSave);
+  }, [
+    library,
+    studyContents,
+    selectedStudyId,
+  ]);
+
+  function selectStudy(
+    nextStudyId: string | null,
+  ) {
+    if (
+      nextStudyId === selectedStudyId
+    ) {
+      return;
+    }
+
+    /*
+     * Guardamos inmediatamente el estudio
+     * que estamos abandonando.
+     */
+    if (selectedStudyId) {
+      setStudyContents(
+        (previousContents) => ({
+          ...previousContents,
+
+          [selectedStudyId]: {
+            studyId: selectedStudyId,
+            nodes,
+            currentNodeId,
+            updatedAt:
+              new Date().toISOString(),
+          },
+        }),
+      );
+    }
+
+    /*
+     * Si no hay ningún estudio seleccionado,
+     * mostramos un tablero vacío.
+     */
+    if (!nextStudyId) {
+      setSelectedStudyId(null);
+      setNodes(createInitialNodes());
+      setCurrentNodeId("root");
+
+      return;
+    }
+
+    /*
+     * Cargamos el contenido del nuevo estudio.
+     * Si todavía no existe, se crea vacío.
+     */
+    const nextContent =
+      studyContents[nextStudyId] ??
+      createEmptyStudyContent(
+        nextStudyId,
+      );
+
+    setStudyContents(
+      (previousContents) => ({
+        ...previousContents,
+        [nextStudyId]:
+          nextContent,
+      }),
+    );
+
+    setSelectedStudyId(nextStudyId);
+    setNodes(nextContent.nodes);
+    setCurrentNodeId(
+      nextContent.currentNodeId,
+    );
+  }
+
+  useEffect(() => {
+    const validStudyIds = new Set(
+      library.studies.map(
+        (study) => study.id,
+      ),
+    );
+
+    setStudyContents(
+      (previousContents) => {
+        const cleanedContents:
+          StudyContentsMap = {};
+
+        let contentsChanged = false;
+
+        for (const [
+          studyId,
+          content,
+        ] of Object.entries(
+          previousContents,
+        )) {
+          if (validStudyIds.has(studyId)) {
+            cleanedContents[studyId] =
+              content;
+          } else {
+            contentsChanged = true;
+          }
+        }
+
+        return contentsChanged
+          ? cleanedContents
+          : previousContents;
+      },
+    );
+  }, [library.studies]);
 
   useEffect(() => {
     if (!pgnCopied) {
@@ -531,6 +767,10 @@ function App() {
     sourceSquare: string,
     targetSquare: string,
   ): boolean {
+    if (!selectedStudyId) {
+      return false;
+    }
+
     const nodeAtCurrentPosition =
       nodes[currentNodeId];
 
@@ -723,7 +963,7 @@ function App() {
           library={library}
           selectedStudyId={selectedStudyId}
           onLibraryChange={setLibrary}
-          onStudySelect={setSelectedStudyId}
+          onStudySelect={selectStudy}
         />
         <div className="board-section">
           <div className="board-container">

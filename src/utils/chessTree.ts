@@ -1,5 +1,10 @@
 import { Chess } from "chess.js";
-import type { MoveNode, MoveRow, NodesMap } from "../types";
+import type {
+  MoveNode,
+  MoveRow,
+  NodesMap,
+  StudyContent,
+} from "../types";
 
 export function createInitialNodes(): NodesMap {
   return {
@@ -14,6 +19,17 @@ export function createInitialNodes(): NodesMap {
       children: [],
       note: "",
     },
+  };
+}
+
+export function createEmptyStudyContent(
+  studyId: string,
+): StudyContent {
+  return {
+    studyId,
+    nodes: createInitialNodes(),
+    currentNodeId: "root",
+    updatedAt: new Date().toISOString(),
   };
 }
 
