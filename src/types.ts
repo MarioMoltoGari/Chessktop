@@ -16,10 +16,7 @@ export type MoveNode = {
   note: string;
 };
 
-export type NodesMap = Record<
-  string,
-  MoveNode
->;
+export type NodesMap = Record<string, MoveNode>;
 
 export type MoveRow = {
   moveNumber: number;

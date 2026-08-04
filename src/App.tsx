@@ -408,17 +408,16 @@ type InitialAppState = {
   library: LibraryState;
   studyContents: StudyContentsMap;
   selectedStudyId: string | null;
-  activeContent: StudyContent | null;
 };
 
-function createInitialAppState():
-  InitialAppState {
-  const storedState =
-    loadChessktopState();
+function createInitialAppState(): InitialAppState {
+  const storedState = loadChessktopState();
 
   const library =
-    storedState?.library ??
-    initialLibraryState;
+    storedState?.library ?? initialLibraryState;
+
+  const storedContents =
+    storedState?.studyContents ?? {};
 
   let selectedStudyId =
     storedState?.selectedStudyId ?? null;
@@ -426,8 +425,7 @@ function createInitialAppState():
   const selectedStudyExists =
     selectedStudyId !== null &&
     library.studies.some(
-      (study) =>
-        study.id === selectedStudyId,
+      (study) => study.id === selectedStudyId,
     );
 
   if (!selectedStudyExists) {
@@ -435,35 +433,26 @@ function createInitialAppState():
       library.studies[0]?.id ?? null;
   }
 
-  const studyContents =
-    storedState?.studyContents ?? {};
+  const studyContents = {
+    ...storedContents,
+  };
 
-  if (!selectedStudyId) {
-    return {
-      library,
-      studyContents,
-      selectedStudyId: null,
-      activeContent: null,
-    };
+  if (
+    selectedStudyId &&
+    !studyContents[selectedStudyId]
+  ) {
+    studyContents[selectedStudyId] =
+      createEmptyStudyContent(selectedStudyId);
   }
-
-  const activeContent =
-    studyContents[selectedStudyId] ??
-    createEmptyStudyContent(
-      selectedStudyId,
-    );
 
   return {
     library,
-    studyContents: {
-      ...studyContents,
-      [selectedStudyId]:
-        activeContent,
-    },
+    studyContents,
     selectedStudyId,
-    activeContent,
   };
 }
+
+const EMPTY_NODES = createInitialNodes();
 
 function App() {
   const [initialState] = useState(
@@ -489,26 +478,6 @@ function App() {
     initialState.studyContents,
   );
 
-  const selectedStudy =
-    library.studies.find(
-      (study) =>
-        study.id === selectedStudyId,
-    ) ?? null;
-
-  const [nodes, setNodes] =
-    useState<NodesMap>(
-      initialState.activeContent?.nodes ??
-      createInitialNodes(),
-    );
-
-  const [
-    currentNodeId,
-    setCurrentNodeId,
-  ] = useState(
-    initialState.activeContent
-      ?.currentNodeId ?? "root",
-  );
-
   const [pgnCopied, setPgnCopied] =
     useState(false);
 
@@ -518,10 +487,30 @@ function App() {
   const [noteDraft, setNoteDraft] =
     useState("");
 
-  const currentNode = nodes[currentNodeId];
+  const selectedStudy =
+    library.studies.find(
+      (study) =>
+        study.id === selectedStudyId,
+    ) ?? null;
 
-  const position =
-    currentNode?.fen ?? nodes.root.fen;
+  const activeStudyContent =
+    selectedStudyId
+      ? studyContents[selectedStudyId] ?? null
+      : null;
+
+  const nodes =
+    activeStudyContent?.nodes ??
+    EMPTY_NODES;
+
+  const currentNodeId =
+    activeStudyContent?.currentNodeId ??
+    "root";
+
+  const currentNode =
+    nodes[currentNodeId] ??
+    nodes.root;
+
+  const position = currentNode.fen;
 
   const game = useMemo(
     () => new Chess(position),
@@ -562,30 +551,6 @@ function App() {
   );
 
   useEffect(() => {
-    if (!selectedStudyId) {
-      return;
-    }
-
-    setStudyContents(
-      (previousContents) => ({
-        ...previousContents,
-
-        [selectedStudyId]: {
-          studyId: selectedStudyId,
-          nodes,
-          currentNodeId,
-          updatedAt:
-            new Date().toISOString(),
-        },
-      }),
-    );
-  }, [
-    selectedStudyId,
-    nodes,
-    currentNodeId,
-  ]);
-
-  useEffect(() => {
     const stateToSave: ChessktopStorage = {
       version: 1,
       library,
@@ -599,72 +564,6 @@ function App() {
     studyContents,
     selectedStudyId,
   ]);
-
-  function selectStudy(
-    nextStudyId: string | null,
-  ) {
-    if (
-      nextStudyId === selectedStudyId
-    ) {
-      return;
-    }
-
-    /*
-     * Guardamos inmediatamente el estudio
-     * que estamos abandonando.
-     */
-    if (selectedStudyId) {
-      setStudyContents(
-        (previousContents) => ({
-          ...previousContents,
-
-          [selectedStudyId]: {
-            studyId: selectedStudyId,
-            nodes,
-            currentNodeId,
-            updatedAt:
-              new Date().toISOString(),
-          },
-        }),
-      );
-    }
-
-    /*
-     * Si no hay ningún estudio seleccionado,
-     * mostramos un tablero vacío.
-     */
-    if (!nextStudyId) {
-      setSelectedStudyId(null);
-      setNodes(createInitialNodes());
-      setCurrentNodeId("root");
-
-      return;
-    }
-
-    /*
-     * Cargamos el contenido del nuevo estudio.
-     * Si todavía no existe, se crea vacío.
-     */
-    const nextContent =
-      studyContents[nextStudyId] ??
-      createEmptyStudyContent(
-        nextStudyId,
-      );
-
-    setStudyContents(
-      (previousContents) => ({
-        ...previousContents,
-        [nextStudyId]:
-          nextContent,
-      }),
-    );
-
-    setSelectedStudyId(nextStudyId);
-    setNodes(nextContent.nodes);
-    setCurrentNodeId(
-      nextContent.currentNodeId,
-    );
-  }
 
   useEffect(() => {
     const validStudyIds = new Set(
@@ -702,6 +601,63 @@ function App() {
   }, [library.studies]);
 
   useEffect(() => {
+    if (!selectedStudyId) {
+      return;
+    }
+
+    const selectedStudyStillExists =
+      library.studies.some(
+        (study) =>
+          study.id === selectedStudyId,
+      );
+
+    if (!selectedStudyStillExists) {
+      setSelectedStudyId(
+        library.studies[0]?.id ?? null,
+      );
+    }
+  }, [
+    library.studies,
+    selectedStudyId,
+  ]);
+
+  function selectStudy(
+    nextStudyId: string | null,
+  ) {
+    if (!nextStudyId) {
+      setSelectedStudyId(null);
+      closeNote();
+      return;
+    }
+
+    const studyExists =
+      library.studies.some(
+        (study) =>
+          study.id === nextStudyId,
+      );
+
+    if (!studyExists) {
+      return;
+    }
+
+    if (!studyContents[nextStudyId]) {
+      setStudyContents(
+        (previousContents) => ({
+          ...previousContents,
+
+          [nextStudyId]:
+            createEmptyStudyContent(
+              nextStudyId,
+            ),
+        }),
+      );
+    }
+
+    setSelectedStudyId(nextStudyId);
+    closeNote();
+  }
+
+  useEffect(() => {
     if (!pgnCopied) {
       return;
     }
@@ -714,6 +670,48 @@ function App() {
       window.clearTimeout(timeoutId);
     };
   }, [pgnCopied]);
+
+  function updateActiveStudy(
+    updater: (
+      content: StudyContent,
+    ) => StudyContent,
+  ) {
+    if (!selectedStudyId) {
+      return;
+    }
+
+    setStudyContents(
+      (previousContents) => {
+        const currentContent =
+          previousContents[selectedStudyId] ??
+          createEmptyStudyContent(
+            selectedStudyId,
+          );
+
+        return {
+          ...previousContents,
+
+          [selectedStudyId]: {
+            ...updater(currentContent),
+
+            studyId: selectedStudyId,
+
+            updatedAt:
+              new Date().toISOString(),
+          },
+        };
+      },
+    );
+  }
+
+  function setActiveNodeId(
+    nodeId: string,
+  ) {
+    updateActiveStudy((content) => ({
+      ...content,
+      currentNodeId: nodeId,
+    }));
+  }
 
   function openNote(nodeId: string) {
     const node = nodes[nodeId];
@@ -732,15 +730,23 @@ function App() {
   }
 
   function saveNote() {
-    if (!noteNodeId || !nodes[noteNodeId]) {
+    if (
+      !noteNodeId ||
+      !nodes[noteNodeId]
+    ) {
       return;
     }
 
-    setNodes((previousNodes) => ({
-      ...previousNodes,
-      [noteNodeId]: {
-        ...previousNodes[noteNodeId],
-        note: noteDraft.trim(),
+    updateActiveStudy((content) => ({
+      ...content,
+
+      nodes: {
+        ...content.nodes,
+
+        [noteNodeId]: {
+          ...content.nodes[noteNodeId],
+          note: noteDraft.trim(),
+        },
       },
     }));
 
@@ -748,15 +754,23 @@ function App() {
   }
 
   function deleteNote() {
-    if (!noteNodeId || !nodes[noteNodeId]) {
+    if (
+      !noteNodeId ||
+      !nodes[noteNodeId]
+    ) {
       return;
     }
 
-    setNodes((previousNodes) => ({
-      ...previousNodes,
-      [noteNodeId]: {
-        ...previousNodes[noteNodeId],
-        note: "",
+    updateActiveStudy((content) => ({
+      ...content,
+
+      nodes: {
+        ...content.nodes,
+
+        [noteNodeId]: {
+          ...content.nodes[noteNodeId],
+          note: "",
+        },
       },
     }));
 
@@ -792,8 +806,7 @@ function App() {
       const existingChildId =
         nodeAtCurrentPosition.children.find(
           (childId) => {
-            const child: MoveNode | undefined =
-              nodes[childId];
+            const child = nodes[childId];
 
             if (!child) {
               return false;
@@ -802,17 +815,19 @@ function App() {
             return (
               child.from === move.from &&
               child.to === move.to &&
-              child.promotion === move.promotion
+              child.promotion ===
+              move.promotion
             );
           },
         );
 
       if (existingChildId) {
-        setCurrentNodeId(existingChildId);
+        setActiveNodeId(existingChildId);
         return true;
       }
 
-      const newNodeId = crypto.randomUUID();
+      const newNodeId =
+        crypto.randomUUID();
 
       const newNode: MoveNode = {
         id: newNodeId,
@@ -824,27 +839,38 @@ function App() {
         promotion: move.promotion,
 
         fen: gameCopy.fen(),
-        ply: nodeAtCurrentPosition.ply + 1,
+        ply:
+          nodeAtCurrentPosition.ply + 1,
 
         children: [],
         note: "",
       };
 
-      setNodes((previousNodes) => ({
-        ...previousNodes,
+      updateActiveStudy((content) => ({
+        ...content,
 
-        [currentNodeId]: {
-          ...previousNodes[currentNodeId],
-          children: [
-            ...previousNodes[currentNodeId].children,
-            newNodeId,
-          ],
+        nodes: {
+          ...content.nodes,
+
+          [currentNodeId]: {
+            ...content.nodes[
+            currentNodeId
+            ],
+
+            children: [
+              ...content.nodes[
+                currentNodeId
+              ].children,
+
+              newNodeId,
+            ],
+          },
+
+          [newNodeId]: newNode,
         },
 
-        [newNodeId]: newNode,
+        currentNodeId: newNodeId,
       }));
-
-      setCurrentNodeId(newNodeId);
 
       return true;
     } catch {
@@ -854,12 +880,12 @@ function App() {
 
   function goToMove(nodeId: string) {
     if (nodes[nodeId]) {
-      setCurrentNodeId(nodeId);
+      setActiveNodeId(nodeId);
     }
   }
 
   function goToStart() {
-    setCurrentNodeId("root");
+    setActiveNodeId("root");
   }
 
   function goToPreviousMove() {
@@ -867,7 +893,7 @@ function App() {
       nodes[currentNodeId]?.parentId;
 
     if (parentId !== null && parentId !== undefined) {
-      setCurrentNodeId(parentId);
+      setActiveNodeId(parentId);
     }
   }
 
@@ -876,7 +902,7 @@ function App() {
       nodes[currentNodeId]?.children[0];
 
     if (firstChildId) {
-      setCurrentNodeId(firstChildId);
+      setActiveNodeId(firstChildId);
     }
   }
 
@@ -885,21 +911,25 @@ function App() {
       return;
     }
 
-    const nodeToDelete = nodes[currentNodeId];
-    const parentId = nodeToDelete.parentId;
+    const nodeToDelete =
+      nodes[currentNodeId];
+
+    const parentId =
+      nodeToDelete?.parentId;
 
     if (!parentId) {
       return;
     }
 
-    const subtreeIds = getSubtreeNodeIds(
-      nodes,
-      currentNodeId,
-    );
+    const subtreeIds =
+      getSubtreeNodeIds(
+        nodes,
+        currentNodeId,
+      );
 
-    setNodes((previousNodes) => {
+    updateActiveStudy((content) => {
       const updatedNodes = {
-        ...previousNodes,
+        ...content.nodes,
       };
 
       for (const nodeId of subtreeIds) {
@@ -908,23 +938,35 @@ function App() {
 
       updatedNodes[parentId] = {
         ...updatedNodes[parentId],
-        children: updatedNodes[
-          parentId
-        ].children.filter(
-          (childId) =>
-            childId !== currentNodeId,
-        ),
+
+        children:
+          updatedNodes[
+            parentId
+          ].children.filter(
+            (childId) =>
+              childId !== currentNodeId,
+          ),
       };
 
-      return updatedNodes;
+      return {
+        ...content,
+        nodes: updatedNodes,
+        currentNodeId: parentId,
+      };
     });
-
-    setCurrentNodeId(parentId);
   }
 
   function resetGame() {
-    setNodes(createInitialNodes());
-    setCurrentNodeId("root");
+    if (!selectedStudyId) {
+      return;
+    }
+
+    updateActiveStudy((content) => ({
+      ...content,
+      nodes: createInitialNodes(),
+      currentNodeId: "root",
+    }));
+
     setPgnCopied(false);
     closeNote();
   }
