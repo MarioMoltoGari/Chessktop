@@ -20,6 +20,7 @@ import {
   saveChessktopState,
 } from "./utils/storage";
 import { exportLibrary, readLibraryBackup } from "./utils/export";
+import StockfishPanel from "./components/engine/StockfishPanel";
 
 type MoveNode = {
   id: string;
@@ -1069,6 +1070,17 @@ function App() {
           onImportLibrary={handleImportLibrary}
         />
         <div className="board-section">
+          <div className="board-section">
+            <StockfishPanel
+              fen={position}
+              hasActiveStudy={
+                selectedStudyId !== null
+              }
+            />
+            <div className="board-container">
+            </div>
+            {/* controles */}
+          </div>
           <div className="board-container">
             <Chessboard
               options={{

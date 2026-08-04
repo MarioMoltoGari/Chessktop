@@ -7,13 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare:stockfish": "node scripts/copy-stockfish.mjs",
+    "postinstall": "npm run prepare:stockfish"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
     "react": "^19.2.8",
     "react-chessboard": "^5.11.0",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "stockfish": "^18.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
