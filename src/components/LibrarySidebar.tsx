@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import type {
     ChessStudy,
     LibraryFolder,
@@ -11,6 +11,10 @@ type LibrarySidebarProps = {
 
     onLibraryChange: (library: LibraryState) => void;
     onStudySelect: (studyId: string | null) => void;
+    onExportLibrary: () => void;
+    onImportLibrary: (
+        file: File,
+    ) => void;
 };
 
 type FolderNodeProps = {
@@ -212,9 +216,13 @@ export default function LibrarySidebar({
     selectedStudyId,
     onLibraryChange,
     onStudySelect,
+    onExportLibrary,
+    onImportLibrary,
 }: LibrarySidebarProps) {
     const [search, setSearch] = useState("");
     const [deleteMode, setDeleteMode] = useState(false);
+    const importInputRef =
+        useRef<HTMLInputElement>(null);
 
     const normalizedSearch =
         search.trim().toLocaleLowerCase();
@@ -487,8 +495,8 @@ export default function LibrarySidebar({
                         type="button"
                         key={study.id}
                         className={`library-study-row root-study ${selectedStudyId === study.id
-                                ? "active"
-                                : ""
+                            ? "active"
+                            : ""
                             } ${deleteMode ? "delete-mode" : ""}`}
                         onClick={() => {
                             if (deleteMode) {
@@ -514,6 +522,46 @@ export default function LibrarySidebar({
                             empezar.
                         </p>
                     )}
+            </div>
+            <div className="library-footer">
+                <button
+                    type="button"
+                    className="library-import-button"
+                    onClick={() =>
+                        importInputRef.current?.click()
+                    }
+                >
+                    Importar biblioteca
+                </button>
+
+                <button
+                    type="button"
+                    className="library-export-button"
+                    onClick={onExportLibrary}
+                >
+                    Exportar biblioteca
+                </button>
+
+                <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    className="library-file-input"
+                    onChange={(event) => {
+                        const file =
+                            event.target.files?.[0];
+
+                        if (file) {
+                            onImportLibrary(file);
+                        }
+
+                        /*
+                         * Reiniciamos el input para permitir
+                         * volver a importar el mismo archivo.
+                         */
+                        event.target.value = "";
+                    }}
+                />
             </div>
         </aside>
     );

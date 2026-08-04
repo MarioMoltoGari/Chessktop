@@ -655,6 +655,8 @@ textarea,
 }
 
 .library-sidebar {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   width: 100%;
   height: var(--side-panel-height);
@@ -734,10 +736,49 @@ textarea,
 }
 
 .library-tree {
-  height: calc(100% - 154px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-
   padding: 4px 8px 16px;
+}
+
+.library-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+  flex-shrink: 0;
+
+  padding: 14px 18px 18px;
+  border-top: 1px solid #dedbd3;
+  background: #ffffff;
+}
+
+.library-import-button,
+.library-export-button {
+  width: 100%;
+  padding: 10px 8px;
+
+  border: 1px solid #667d62;
+  border-radius: 6px;
+
+  background: #ffffff;
+  color: #53684f;
+
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.library-import-button:hover,
+.library-export-button:hover {
+  background: #667d62;
+  color: #ffffff;
+}
+
+.library-file-input {
+  display: none;
 }
 
 .library-folder-row {
@@ -856,4 +897,33 @@ textarea,
   color: #777a73;
   font-size: 0.88rem;
   line-height: 1.5;
+}
+
+/*****************************/
+/* Botón exportar biblioteca */
+/*****************************/
+
+.library-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid #dedbd3;
+}
+
+.library-export-button {
+  width: 100%;
+  padding: 10px;
+
+  border: 1px solid #667d62;
+  border-radius: 6px;
+
+  background: white;
+  color: #53684f;
+
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.library-export-button:hover {
+  background: #667d62;
+  color: white;
 }

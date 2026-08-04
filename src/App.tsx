@@ -19,7 +19,7 @@ import {
   loadChessktopState,
   saveChessktopState,
 } from "./utils/storage";
-// import "./styles/library-sidebar.css";
+import { exportLibrary, readLibraryBackup } from "./utils/export";
 
 type MoveNode = {
   id: string;
@@ -621,6 +621,65 @@ function App() {
     selectedStudyId,
   ]);
 
+  async function handleImportLibrary(
+    file: File,
+  ) {
+    const confirmed = window.confirm(
+      "La biblioteca actual será reemplazada completamente por la copia seleccionada.\n\n" +
+      "Las carpetas, estudios, movimientos y notas actuales que no estén en la copia se perderán.\n\n" +
+      "¿Deseas continuar?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const importedState =
+        await readLibraryBackup(file);
+
+      setLibrary(
+        importedState.library,
+      );
+
+      setStudyContents(
+        importedState.studyContents,
+      );
+
+      setSelectedStudyId(
+        importedState.selectedStudyId,
+      );
+
+      closeNote();
+      setPgnCopied(false);
+
+      alert(
+        "La biblioteca se ha importado correctamente.",
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo importar la biblioteca.";
+
+      console.error(
+        "Error al importar la biblioteca:",
+        error,
+      );
+
+      alert(message);
+    }
+  }
+
+  function handleExportLibrary() {
+    exportLibrary({
+      version: 1,
+      library,
+      studyContents,
+      selectedStudyId,
+    });
+  }
+
   function selectStudy(
     nextStudyId: string | null,
   ) {
@@ -1006,6 +1065,8 @@ function App() {
           selectedStudyId={selectedStudyId}
           onLibraryChange={setLibrary}
           onStudySelect={selectStudy}
+          onExportLibrary={handleExportLibrary}
+          onImportLibrary={handleImportLibrary}
         />
         <div className="board-section">
           <div className="board-container">
