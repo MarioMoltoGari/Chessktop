@@ -3,7 +3,7 @@ import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import "./App.css";
 import LibrarySidebar from "./components/LibrarySidebar";
-import { initialLibraryState } from "./data/initialLibrary";
+import { defaultLibrary } from "./data/defaultLibrary";
 import type {
   StudyContent,
   StudyContentsMap,
@@ -412,11 +412,11 @@ type InitialAppState = {
   selectedStudyId: string | null;
 };
 
-function createInitialAppState(): InitialAppState {
+function loadAppState(): InitialAppState {
   const storedState = loadChessktopState();
 
   const library =
-    storedState?.library ?? initialLibraryState;
+    storedState?.library ?? defaultLibrary;
 
   const storedContents =
     storedState?.studyContents ?? {};
@@ -458,13 +458,12 @@ const EMPTY_NODES = createInitialNodes();
 
 function App() {
   const [initialState] = useState(
-    createInitialAppState,
+    loadAppState,
   );
 
-  const [library, setLibrary] =
-    useState<LibraryState>(
-      initialState.library,
-    );
+  const [library, setLibrary] = useState<LibraryState>(
+    initialState.library,
+);
 
   const [
     selectedStudyId,
