@@ -314,13 +314,15 @@ export default function LibrarySidebar({
     }
 
     function deleteStudy(studyId: string) {
-        const study = library.studies.find(
-            (item) => item.id === studyId,
+        const studyIndex = library.studies.findIndex(
+            (study) => study.id === studyId,
         );
 
-        if (!study) {
+        if (studyIndex === -1) {
             return;
         }
+
+        const study = library.studies[studyIndex];
 
         const confirmed = window.confirm(
             `¿Quieres borrar el estudio "${study.name}"?`,
@@ -330,16 +332,39 @@ export default function LibrarySidebar({
             return;
         }
 
+        const remainingStudies =
+            library.studies.filter(
+                (item) => item.id !== studyId,
+            );
+
+        /*
+         * Elegimos el estudio que ocupará el lugar
+         * del que estamos borrando.
+         *
+         * Prioridad:
+         * 1. El siguiente estudio de la lista.
+         * 2. Si no existe, el anterior.
+         * 3. Si no queda ninguno, null.
+         */
+        const fallbackStudy =
+            remainingStudies[studyIndex] ??
+            remainingStudies[studyIndex - 1] ??
+            remainingStudies[0] ??
+            null;
+
         onLibraryChange({
             ...library,
-
-            studies: library.studies.filter(
-                (item) => item.id !== studyId,
-            ),
+            studies: remainingStudies,
         });
 
+        /*
+         * Solo cambiamos la selección si estamos
+         * borrando el estudio activo.
+         */
         if (selectedStudyId === studyId) {
-            onStudySelect(null);
+            onStudySelect(
+                fallbackStudy?.id ?? null,
+            );
         }
 
         setDeleteMode(false);
@@ -371,36 +396,79 @@ export default function LibrarySidebar({
                     folderIdSet.has(study.folderId),
             );
 
+        const studyIdsToDelete = new Set(
+            studiesToDelete.map(
+                (study) => study.id,
+            ),
+        );
+
         const confirmed = window.confirm(
             `¿Quieres borrar la carpeta "${folder.name}"?\n\n` +
-            `También se eliminarán ${folderIdsToDelete.length - 1} subcarpetas ` +
-            `y ${studiesToDelete.length} estudios.`,
+            `También se eliminarán ${folderIdsToDelete.length - 1
+            } subcarpetas y ${studiesToDelete.length
+            } estudios.`,
         );
 
         if (!confirmed) {
             return;
         }
 
-        onLibraryChange({
-            folders: library.folders.filter(
-                (item) => !folderIdSet.has(item.id),
-            ),
-
-            studies: library.studies.filter(
-                (study) =>
-                    study.folderId === null ||
-                    !folderIdSet.has(study.folderId),
-            ),
-        });
-
-        const selectedStudyWasDeleted =
-            studiesToDelete.some(
-                (study) =>
-                    study.id === selectedStudyId,
+        const remainingFolders =
+            library.folders.filter(
+                (item) =>
+                    !folderIdSet.has(item.id),
             );
 
+        const remainingStudies =
+            library.studies.filter(
+                (study) =>
+                    !studyIdsToDelete.has(study.id),
+            );
+
+        const selectedStudyWasDeleted =
+            selectedStudyId !== null &&
+            studyIdsToDelete.has(
+                selectedStudyId,
+            );
+
+        /*
+         * Buscamos una selección alternativa.
+         *
+         * Intentamos conservar aproximadamente
+         * la posición que ocupaba el estudio borrado
+         * dentro de la lista general.
+         */
+        let fallbackStudyId: string | null =
+            selectedStudyId;
+
         if (selectedStudyWasDeleted) {
-            onStudySelect(null);
+            const selectedStudyIndex =
+                library.studies.findIndex(
+                    (study) =>
+                        study.id === selectedStudyId,
+                );
+
+            const fallbackStudy =
+                remainingStudies[
+                selectedStudyIndex
+                ] ??
+                remainingStudies[
+                selectedStudyIndex - 1
+                ] ??
+                remainingStudies[0] ??
+                null;
+
+            fallbackStudyId =
+                fallbackStudy?.id ?? null;
+        }
+
+        onLibraryChange({
+            folders: remainingFolders,
+            studies: remainingStudies,
+        });
+
+        if (selectedStudyWasDeleted) {
+            onStudySelect(fallbackStudyId);
         }
 
         setDeleteMode(false);

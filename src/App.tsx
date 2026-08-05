@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import "./App.css";
@@ -21,6 +21,7 @@ import {
 } from "./utils/storage";
 import { exportLibrary, readLibraryBackup } from "./utils/export";
 import StockfishPanel from "./components/engine/StockfishPanel";
+import Toast from "./components/Toast";
 
 type MoveNode = {
   id: string;
@@ -488,6 +489,15 @@ function App() {
   const [noteDraft, setNoteDraft] =
     useState("");
 
+  const [toastMessage, setToastMessage] =
+    useState("");
+
+  const [toastVisible, setToastVisible] =
+    useState(false);
+
+  const toastTimeoutRef =
+    useRef<number | null>(null);
+
   const selectedStudy =
     library.studies.find(
       (study) =>
@@ -621,6 +631,36 @@ function App() {
     library.studies,
     selectedStudyId,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(
+          toastTimeoutRef.current,
+        );
+      }
+    };
+  }, []);
+
+  function showToast(
+    message: string,
+    duration = 2500,
+  ) {
+    setToastMessage(message);
+    setToastVisible(true);
+
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(
+        toastTimeoutRef.current,
+      );
+    }
+
+    toastTimeoutRef.current =
+      window.setTimeout(() => {
+        setToastVisible(false);
+        toastTimeoutRef.current = null;
+      }, duration);
+  }
 
   async function handleImportLibrary(
     file: File,
@@ -1077,8 +1117,6 @@ function App() {
                 selectedStudyId !== null
               }
             />
-            <div className="board-container">
-            </div>
             {/* controles */}
           </div>
           <div className="board-container">
@@ -1090,7 +1128,14 @@ function App() {
                   sourceSquare,
                   targetSquare,
                 }) => {
-                  if (!targetSquare) {
+                  if (
+                    !selectedStudyId ||
+                    !targetSquare
+                  ) {
+                    showToast(
+                      "Selecciona o crea un estudio para utilizar el tablero.",
+                      3000,
+                    );
                     return false;
                   }
 
@@ -1392,6 +1437,10 @@ function App() {
           </section>
         </div>
       )}
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+      />
     </main>
   );
 }
