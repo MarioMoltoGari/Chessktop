@@ -4,6 +4,10 @@ import type {
     LibraryFolder,
     LibraryState,
 } from "../types/library";
+import ContextMenu, {
+    type ContextMenuItem,
+} from "./library/ContextMenu";
+import MoveLibraryItemDialog from "./library/MoveLibraryItemDialog";
 
 type LibrarySidebarProps = {
     library: LibraryState;
@@ -31,6 +35,26 @@ type FolderNodeProps = {
     onCreateStudy: (folderId: string | null) => void;
     onDeleteFolder: (folderId: string) => void;
     onDeleteStudy: (studyId: string) => void;
+    onOpenContextMenu: (
+        event: React.MouseEvent,
+        target: LibraryContextTarget,
+    ) => void;
+};
+
+type LibraryContextTarget =
+    | {
+        type: "folder";
+        id: string;
+    }
+    | {
+        type: "study";
+        id: string;
+    };
+
+type LibraryContextMenuState = {
+    x: number;
+    y: number;
+    target: LibraryContextTarget;
 };
 
 function FolderNode({
@@ -46,6 +70,7 @@ function FolderNode({
     onCreateStudy,
     onDeleteFolder,
     onDeleteStudy,
+    onOpenContextMenu,
 }: FolderNodeProps) {
     const childFolders = folders.filter(
         (candidate) => candidate.parentId === folder.id,
@@ -69,6 +94,12 @@ function FolderNode({
             <div
                 className={`library-folder-row ${deleteMode ? "delete-mode" : ""
                     }`}
+                onContextMenu={(event) =>
+                    onOpenContextMenu(event, {
+                        type: "folder",
+                        id: folder.id,
+                    })
+                }
                 style={{
                     paddingLeft: `${depth * 16 + 8}px`,
                 }}
@@ -161,6 +192,9 @@ function FolderNode({
                             onCreateStudy={onCreateStudy}
                             onDeleteFolder={onDeleteFolder}
                             onDeleteStudy={onDeleteStudy}
+                            onOpenContextMenu={
+                                onOpenContextMenu
+                            }
                         />
                     ))}
 
@@ -173,6 +207,12 @@ function FolderNode({
                             style={{
                                 paddingLeft: `${(depth + 1) * 16 + 34}px`,
                             }}
+                            onContextMenu={(event) =>
+                                onOpenContextMenu(event, {
+                                    type: "study",
+                                    id: study.id,
+                                })
+                            }
                             onClick={() => {
                                 if (deleteMode) {
                                     onDeleteStudy(study.id);
@@ -194,6 +234,8 @@ function FolderNode({
         </div>
     );
 }
+
+
 
 function getDescendantFolderIds(
     folders: LibraryFolder[],
@@ -221,6 +263,18 @@ export default function LibrarySidebar({
 }: LibrarySidebarProps) {
     const [search, setSearch] = useState("");
     const [deleteMode, setDeleteMode] = useState(false);
+    const [
+        contextMenu,
+        setContextMenu,
+    ] = useState<
+        LibraryContextMenuState | null
+    >(null);
+    const [
+        moveTarget,
+        setMoveTarget,
+    ] = useState<
+        LibraryContextTarget | null
+    >(null);
     const importInputRef =
         useRef<HTMLInputElement>(null);
 
@@ -247,6 +301,243 @@ export default function LibrarySidebar({
         (study) => study.folderId === null,
     );
 
+    function openContextMenu(
+        event: React.MouseEvent,
+        target: LibraryContextTarget,
+    ) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        /*
+         * Reservamos aproximadamente 210 × 260 px
+         * para evitar que el menú salga de la pantalla.
+         */
+        const menuWidth = 210;
+        const menuHeight = 260;
+        const margin = 8;
+
+        const x = Math.min(
+            event.clientX,
+            window.innerWidth -
+            menuWidth -
+            margin,
+        );
+
+        const y = Math.min(
+            event.clientY,
+            window.innerHeight -
+            menuHeight -
+            margin,
+        );
+
+        setContextMenu({
+            x: Math.max(margin, x),
+            y: Math.max(margin, y),
+            target,
+        });
+    }
+
+    function openMoveDialog(
+        target: LibraryContextTarget,
+    ) {
+        setMoveTarget(target);
+    }
+
+    function moveStudy(
+        studyId: string,
+        targetFolderId: string | null,
+    ) {
+        const study =
+            library.studies.find(
+                (item) =>
+                    item.id === studyId,
+            );
+
+        if (
+            !study ||
+            study.folderId === targetFolderId
+        ) {
+            setMoveTarget(null);
+            return;
+        }
+
+        onLibraryChange({
+            ...library,
+
+            studies: library.studies.map(
+                (item) =>
+                    item.id === studyId
+                        ? {
+                            ...item,
+                            folderId:
+                                targetFolderId,
+                        }
+                        : item,
+            ),
+        });
+
+        setMoveTarget(null);
+    }
+
+    function renameFolder(
+        folderId: string,
+    ) {
+        const folder =
+            library.folders.find(
+                (item) =>
+                    item.id === folderId,
+            );
+
+        if (!folder) {
+            return;
+        }
+
+        const name = window.prompt(
+            "Nuevo nombre de la carpeta:",
+            folder.name,
+        );
+
+        const trimmedName = name?.trim();
+
+        if (
+            !trimmedName ||
+            trimmedName === folder.name
+        ) {
+            return;
+        }
+
+        onLibraryChange({
+            ...library,
+
+            folders: library.folders.map(
+                (item) =>
+                    item.id === folderId
+                        ? {
+                            ...item,
+                            name: trimmedName,
+                        }
+                        : item,
+            ),
+        });
+    }
+
+    function renameStudy(
+        studyId: string,
+    ) {
+        const study =
+            library.studies.find(
+                (item) =>
+                    item.id === studyId,
+            );
+
+        if (!study) {
+            return;
+        }
+
+        const name = window.prompt(
+            "Nuevo nombre del estudio:",
+            study.name,
+        );
+
+        const trimmedName = name?.trim();
+
+        if (
+            !trimmedName ||
+            trimmedName === study.name
+        ) {
+            return;
+        }
+
+        onLibraryChange({
+            ...library,
+
+            studies: library.studies.map(
+                (item) =>
+                    item.id === studyId
+                        ? {
+                            ...item,
+                            name: trimmedName,
+                        }
+                        : item,
+            ),
+        });
+    }
+
+    function moveFolder(
+        folderId: string,
+        targetParentId: string | null,
+    ) {
+        const folder =
+            library.folders.find(
+                (item) =>
+                    item.id === folderId,
+            );
+
+        if (
+            !folder ||
+            folder.parentId ===
+            targetParentId
+        ) {
+            setMoveTarget(null);
+            return;
+        }
+
+        const descendantIds =
+            new Set(
+                getDescendantFolderIds(
+                    library.folders,
+                    folderId,
+                ),
+            );
+
+        /*
+         * No puede moverse dentro de sí misma
+         * ni dentro de una descendiente.
+         */
+        if (
+            targetParentId !== null &&
+            descendantIds.has(
+                targetParentId,
+            )
+        ) {
+            return;
+        }
+
+        onLibraryChange({
+            ...library,
+
+            folders: library.folders.map(
+                (item) =>
+                    item.id === folderId
+                        ? {
+                            ...item,
+                            parentId:
+                                targetParentId,
+                        }
+                        : item,
+            ),
+        });
+
+        setMoveTarget(null);
+    }
+
+    function getMoveExcludedFolderIds():
+        Set<string> {
+        if (
+            !moveTarget ||
+            moveTarget.type !== "folder"
+        ) {
+            return new Set();
+        }
+
+        return new Set(
+            getDescendantFolderIds(
+                library.folders,
+                moveTarget.id,
+            ),
+        );
+    }
+
     function toggleFolder(folderId: string) {
         onLibraryChange({
             ...library,
@@ -262,24 +553,31 @@ export default function LibrarySidebar({
         });
     }
 
-    function createFolder(parentId: string | null) {
+    function createFolder(
+        parentId: string | null,
+    ) {
         const name = window.prompt(
-            "Nombre de la carpeta:",
+            parentId
+                ? "Nombre de la subcarpeta:"
+                : "Nombre de la carpeta:",
         );
 
-        if (!name?.trim()) {
+        const trimmedName = name?.trim();
+
+        if (!trimmedName) {
             return;
         }
 
-        const newFolder: LibraryFolder = {
+        const newFolder = {
             id: crypto.randomUUID(),
-            name: name.trim(),
+            name: trimmedName,
             parentId,
             isExpanded: true,
         };
 
         onLibraryChange({
             ...library,
+
             folders: [
                 ...library.folders,
                 newFolder,
@@ -287,23 +585,28 @@ export default function LibrarySidebar({
         });
     }
 
-    function createStudy(folderId: string | null) {
+    function createStudy(
+        folderId: string | null,
+    ) {
         const name = window.prompt(
-            "Nombre del estudio o línea:",
+            "Nombre del estudio:",
         );
 
-        if (!name?.trim()) {
+        const trimmedName = name?.trim();
+
+        if (!trimmedName) {
             return;
         }
 
-        const newStudy: ChessStudy = {
+        const newStudy = {
             id: crypto.randomUUID(),
-            name: name.trim(),
+            name: trimmedName,
             folderId,
         };
 
         onLibraryChange({
             ...library,
+
             studies: [
                 ...library.studies,
                 newStudy,
@@ -474,6 +777,108 @@ export default function LibrarySidebar({
         setDeleteMode(false);
     }
 
+    function openStudy(
+        studyId: string,
+    ) {
+        onStudySelect(studyId);
+    }
+
+    function getContextMenuItems():
+        ContextMenuItem[] {
+        if (!contextMenu) {
+            return [];
+        }
+
+        const { target } = contextMenu;
+
+        if (target.type === "folder") {
+            return [
+                {
+                    id: "new-subfolder",
+                    label: "Nueva subcarpeta",
+                    onClick: () =>
+                        createFolder(target.id),
+                },
+                {
+                    id: "new-study",
+                    label: "Nuevo estudio",
+                    onClick: () =>
+                        createStudy(target.id),
+                },
+                {
+                    id: "rename-folder",
+                    label: "Renombrar",
+                    separatorBefore: true,
+                    onClick: () =>
+                        renameFolder(target.id),
+                },
+                {
+                    id: "move-folder",
+                    label: "Mover a...",
+                    onClick: () =>
+                        openMoveDialog({
+                            type: "folder",
+                            id: target.id,
+                        }),
+                },
+                {
+                    id: "delete-folder",
+                    label: "Eliminar",
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () =>
+                        deleteFolder(target.id),
+                },
+            ];
+        }
+
+        return [
+            {
+                id: "open-study",
+                label: "Abrir",
+                onClick: () =>
+                    openStudy(target.id),
+            },
+            {
+                id: "rename-study",
+                label: "Renombrar",
+                separatorBefore: true,
+                onClick: () =>
+                    renameStudy(target.id),
+            },
+            {
+                id: "move-study",
+                label: "Mover a...",
+                onClick: () =>
+                    openMoveDialog({
+                        type: "study",
+                        id: target.id,
+                    }),
+            },
+            {
+                id: "duplicate-study",
+                label: "Duplicar",
+                disabled: true,
+                separatorBefore: true,
+                onClick: () => { },
+            },
+            {
+                id: "export-study",
+                label: "Exportar PGN",
+                disabled: true,
+                onClick: () => { },
+            },
+            {
+                id: "delete-study",
+                label: "Eliminar",
+                danger: true,
+                separatorBefore: true,
+                onClick: () =>
+                    deleteStudy(target.id),
+            },
+        ];
+    }
+
     return (
         <aside
             className={`library-sidebar ${deleteMode ? "delete-mode" : ""
@@ -555,6 +960,7 @@ export default function LibrarySidebar({
                         onCreateStudy={createStudy}
                         onDeleteFolder={deleteFolder}
                         onDeleteStudy={deleteStudy}
+                        onOpenContextMenu={openContextMenu}
                     />
                 ))}
 
@@ -566,6 +972,12 @@ export default function LibrarySidebar({
                             ? "active"
                             : ""
                             } ${deleteMode ? "delete-mode" : ""}`}
+                        onContextMenu={(event) =>
+                            openContextMenu(event, {
+                                type: "study",
+                                id: study.id,
+                            })
+                        }
                         onClick={() => {
                             if (deleteMode) {
                                 deleteStudy(study.id);
@@ -631,6 +1043,64 @@ export default function LibrarySidebar({
                     }}
                 />
             </div>
+            {contextMenu && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    items={getContextMenuItems()}
+                    onClose={() =>
+                        setContextMenu(null)
+                    }
+                />
+            )}
+            {moveTarget && (
+                <MoveLibraryItemDialog
+                    open
+                    title={
+                        moveTarget.type === "folder"
+                            ? "Mover carpeta"
+                            : "Mover estudio"
+                    }
+                    folders={library.folders}
+                    currentFolderId={
+                        moveTarget.type === "folder"
+                            ? library.folders.find(
+                                (folder) =>
+                                    folder.id ===
+                                    moveTarget.id,
+                            )?.parentId ?? null
+                            : library.studies.find(
+                                (study) =>
+                                    study.id ===
+                                    moveTarget.id,
+                            )?.folderId ?? null
+                    }
+                    excludedFolderIds={
+                        getMoveExcludedFolderIds()
+                    }
+                    onConfirm={(
+                        targetFolderId,
+                    ) => {
+                        if (
+                            moveTarget.type ===
+                            "folder"
+                        ) {
+                            moveFolder(
+                                moveTarget.id,
+                                targetFolderId,
+                            );
+                        } else {
+                            moveStudy(
+                                moveTarget.id,
+                                targetFolderId,
+                            );
+                        }
+                    }}
+                    onCancel={() =>
+                        setMoveTarget(null)
+                    }
+                />
+            )}
         </aside>
     );
 }

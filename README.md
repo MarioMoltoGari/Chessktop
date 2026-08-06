@@ -164,10 +164,12 @@ todo desde una única aplicación.
 - [x] Persistencia
 - [x] Exportación
 - [x] Importación
-- [ ] Renombrar carpetas
-- [ ] Renombrar estudios
-- [ ] Arrastrar estudios entre carpetas
-- [ ] Buscador
+- [x] Buscador
+- [X] Renombrar carpetas
+- [X] Renombrar estudios
+- [X] Mover carpetas
+- [X] Mover estudios
+- [ ] Arrastrar y soltar (Drag & Drop)
 
 ---
 
@@ -235,3 +237,11 @@ todo desde una única aplicación.
 - [ ] Tema oscuro
 - [ ] Configuración personalizable
 - [ ] Internacionalización
+
+Actualmente:
+🟢 Biblioteca: ~95% (solo queda Drag & Drop y pequeños refinamientos).
+🟡 Editor de variantes: ~80% (faltan PGN de entrada, NAGs, flechas, comentarios, etc.).
+🟢 Persistencia: ~90% (para un proyecto local está prácticamente terminada).
+🟡 Stockfish: ~75% (ya funciona, pero habrá que pulir estabilidad y añadir opciones).
+🔴 Entrenamiento: ~0% (será uno de los grandes pilares del proyecto).
+🔴 Sincronización/Cuentas: ~0% (reservado para una fase posterior).
