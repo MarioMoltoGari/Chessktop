@@ -35,6 +35,7 @@ import {
   renameTraining,
 } from "./components/training/trainingService";
 import TrainingWorkspace from "./components/training/TrainingWorkspace";
+import type { ActiveWorkspace } from "./types/workspace";
 
 type MoveNode = {
   id: string;
@@ -422,7 +423,7 @@ function createInitialNodes(): NodesMap {
 type InitialAppState = {
   library: LibraryState;
   studyContents: StudyContentsMap;
-  selectedStudyId: string | null;
+  workspace: ActiveWorkspace;
   trainings: TrainingsMap;
 };
 
@@ -437,17 +438,17 @@ function loadAppState(): InitialAppState {
   const storedContents =
     storedState?.studyContents ?? {};
 
-  let selectedStudyId =
+  let initialStudyId =
     storedState?.selectedStudyId ?? null;
 
   const selectedStudyExists =
-    selectedStudyId !== null &&
+    initialStudyId !== null &&
     library.studies.some(
-      (study) => study.id === selectedStudyId,
+      (study) => study.id === initialStudyId,
     );
 
   if (!selectedStudyExists) {
-    selectedStudyId =
+    initialStudyId =
       library.studies[0]?.id ?? null;
   }
 
@@ -456,17 +457,25 @@ function loadAppState(): InitialAppState {
   };
 
   if (
-    selectedStudyId &&
-    !studyContents[selectedStudyId]
+    initialStudyId &&
+    !studyContents[initialStudyId]
   ) {
-    studyContents[selectedStudyId] =
-      createEmptyStudyContent(selectedStudyId);
+    studyContents[initialStudyId] =
+      createEmptyStudyContent(initialStudyId);
   }
+
+  const workspace: ActiveWorkspace =
+    initialStudyId
+      ? {
+        type: "study",
+        studyId: initialStudyId,
+      }
+      : null;
 
   return {
     library,
     studyContents,
-    selectedStudyId,
+    workspace,
     trainings,
   };
 }
@@ -483,10 +492,10 @@ function App() {
   );
 
   const [
-    selectedStudyId,
-    setSelectedStudyId,
-  ] = useState<string | null>(
-    initialState.selectedStudyId,
+    workspace,
+    setWorkspace,
+  ] = useState<ActiveWorkspace>(
+    initialState.workspace,
   );
 
   const [
@@ -503,27 +512,21 @@ function App() {
     initialState.trainings,
   );
 
-  const [
-    selectedTrainingId,
-    setSelectedTrainingId,
-  ] = useState<string | null>(
-    null,
-  );
-
   const selectedTraining =
-    selectedTrainingId
-      ? trainings[
-      selectedTrainingId
-      ] ?? null
+    workspace?.type === "training"
+      ? trainings[workspace.trainingId] ?? null
       : null;
 
+  const selectedStudyId =
+    workspace?.type === "study"
+      ? workspace.studyId
+      : selectedTraining?.studyId ?? null;
 
   const trainingStudy =
     selectedTraining
       ? library.studies.find(
         (study) =>
-          study.id ===
-          selectedTraining.studyId,
+          study.id === selectedTraining.studyId,
       ) ?? null
       : null;
 
@@ -645,14 +648,34 @@ function App() {
       return;
     }
 
-    selectStudy(
-      training.studyId,
-      true
-    );
+    const studyExists =
+      library.studies.some(
+        (study) =>
+          study.id === training.studyId,
+      );
 
-    setSelectedTrainingId(
+    if (!studyExists) {
+      return;
+    }
+
+    if (!studyContents[training.studyId]) {
+      setStudyContents(
+        (previousContents) => ({
+          ...previousContents,
+          [training.studyId]:
+            createEmptyStudyContent(
+              training.studyId,
+            ),
+        }),
+      );
+    }
+
+    setWorkspace({
+      type: "training",
       trainingId,
-    );
+    });
+
+    closeNote();
   }
 
   function handleRenameTraining(
@@ -676,6 +699,23 @@ function App() {
   function handleDeleteTraining(
     trainingId: string,
   ) {
+    const training =
+      trainings[trainingId];
+
+    if (
+      workspace?.type === "training" &&
+      workspace.trainingId === trainingId
+    ) {
+      setWorkspace(
+        training
+          ? {
+            type: "study",
+            studyId: training.studyId,
+          }
+          : null,
+      );
+    }
+
     setTrainings(
       (previousTrainings) =>
         deleteTraining(
@@ -804,25 +844,57 @@ function App() {
     );
 
     /*
-     * Si el estudio actualmente seleccionado
-     * deja de existir, elegimos otro.
-     *
-     * LibrarySidebar ya intenta hacerlo al borrar,
-     * pero esta comprobación protege App frente
-     * a cualquier cambio futuro de biblioteca.
+     * Si el workspace apunta a un estudio que ya no
+     * existe, elegimos un estudio de respaldo.
      */
     if (
-      selectedStudyId &&
-      !validStudyIds.has(
-        selectedStudyId,
-      )
+      workspace?.type === "study" &&
+      !validStudyIds.has(workspace.studyId)
     ) {
-      setSelectedStudyId(
-        nextLibrary.studies[0]?.id ??
-        null,
+      const fallbackStudyId =
+        nextLibrary.studies[0]?.id ?? null;
+
+      setWorkspace(
+        fallbackStudyId
+          ? {
+            type: "study",
+            studyId: fallbackStudyId,
+          }
+          : null,
       );
 
       closeNote();
+    }
+
+    /*
+     * Si el entrenamiento abierto pertenece a un
+     * estudio eliminado, salimos también de ese
+     * workspace para no dejar referencias inválidas.
+     */
+    if (workspace?.type === "training") {
+      const currentTraining =
+        trainings[workspace.trainingId];
+
+      if (
+        !currentTraining ||
+        !validStudyIds.has(
+          currentTraining.studyId,
+        )
+      ) {
+        const fallbackStudyId =
+          nextLibrary.studies[0]?.id ?? null;
+
+        setWorkspace(
+          fallbackStudyId
+            ? {
+              type: "study",
+              studyId: fallbackStudyId,
+            }
+            : null,
+        );
+
+        closeNote();
+      }
     }
   }
 
@@ -871,8 +943,34 @@ function App() {
         importedState.studyContents,
       );
 
-      setSelectedStudyId(
-        importedState.selectedStudyId,
+      setTrainings(
+        importedState.trainings ?? {},
+      );
+
+      const importedStudyId =
+        importedState.selectedStudyId;
+
+      const importedStudyExists =
+        importedStudyId !== null &&
+        importedState.library.studies.some(
+          (study) =>
+            study.id === importedStudyId,
+        );
+
+      setWorkspace(
+        importedStudyExists &&
+          importedStudyId
+          ? {
+            type: "study",
+            studyId: importedStudyId,
+          }
+          : importedState.library.studies[0]
+            ? {
+              type: "study",
+              studyId:
+                importedState.library.studies[0].id,
+            }
+            : null,
       );
 
       closeNote();
@@ -908,17 +1006,9 @@ function App() {
 
   function selectStudy(
     nextStudyId: string | null,
-    keepTraining = false,
   ) {
-
-    if (!keepTraining) {
-      setSelectedTrainingId(
-        null,
-      );
-    }
-
     if (!nextStudyId) {
-      setSelectedStudyId(null);
+      setWorkspace(null);
       closeNote();
       return;
     }
@@ -946,7 +1036,11 @@ function App() {
       );
     }
 
-    setSelectedStudyId(nextStudyId);
+    setWorkspace({
+      type: "study",
+      studyId: nextStudyId,
+    });
+
     closeNote();
   }
 
@@ -1307,19 +1401,27 @@ function App() {
           onRenameTraining={handleRenameTraining}
           onDeleteTraining={handleDeleteTraining}
         />
-        {selectedTraining &&
-          trainingStudy ? (
+        {workspace?.type === "training" &&
+          selectedTraining &&
+          trainingStudy &&
+          studyContents[
+          selectedTraining.studyId
+          ] ? (
           <TrainingWorkspace
-            training={
-              selectedTraining
-            }
-            studyName={
-              trainingStudy.name
-            }
+            key={selectedTraining.id}
+            training={selectedTraining}
+            studyName={trainingStudy.name}
             onClose={() =>
-              setSelectedTrainingId(
-                null,
-              )
+              setWorkspace({
+                type: "study",
+                studyId:
+                  selectedTraining.studyId,
+              })
+            }
+            studyContent={
+              studyContents[
+              selectedTraining.studyId
+              ]
             }
           />
         ) : (

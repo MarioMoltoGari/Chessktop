@@ -1760,9 +1760,9 @@ textarea,
   flex-shrink: 0;
 }
 
-/**********************************/ 
+/**********************************/
 /* Estilos del training workspace */
-/**********************************/ 
+/**********************************/
 
 .training-workspace {
   grid-column: 2 / 4;
@@ -1779,8 +1779,7 @@ textarea,
   background: #ffffff;
 
   box-shadow:
-    0 4px 16px
-    rgba(0, 0, 0, 0.06);
+    0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .training-workspace-header {
@@ -1856,7 +1855,7 @@ textarea,
   color: #343732;
 }
 
-.training-workspace-empty > p {
+.training-workspace-empty>p {
   margin: 0 0 28px;
 
   color: #777b74;
@@ -1883,8 +1882,7 @@ textarea,
   background: #f7f8f5;
 }
 
-.training-workspace-empty dl div +
-div {
+.training-workspace-empty dl div+div {
   border-left:
     1px solid #e0e2dc;
 }
@@ -1905,4 +1903,235 @@ div {
 
   font-size: 0.86rem;
   font-weight: 650;
+}
+
+.training-workspace {
+  grid-column: 2 / 4;
+
+  height: var(--side-panel-height);
+
+  padding: 24px;
+
+  overflow: hidden;
+
+  border: 1px solid #d9d6ce;
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.training-session-layout {
+  display: grid;
+
+  grid-template-columns:
+    minmax(420px, 620px) minmax(220px, 300px);
+
+  justify-content: center;
+  gap: 32px;
+
+  height: calc(100% - 86px);
+
+  padding-top: 22px;
+}
+
+.training-board-section {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+  min-height: 0;
+}
+
+.training-board {
+  width: 100%;
+  max-width: 600px;
+
+  margin: 0 auto;
+}
+
+.training-feedback {
+  margin-top: 14px;
+  padding: 11px 14px;
+
+  border-radius: 7px;
+
+  text-align: center;
+
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.training-feedback.correct {
+  background: #edf4ea;
+  color: #496347;
+}
+
+.training-feedback.incorrect {
+  background: #fff0ee;
+  color: #9a4138;
+}
+
+.training-feedback.complete {
+  background: #eef1ec;
+  color: #536451;
+}
+
+.training-restart-button {
+  align-self: center;
+
+  margin-top: 12px;
+
+  padding: 9px 16px;
+
+  border: 1px solid #667d62;
+  border-radius: 6px;
+
+  background: #667d62;
+  color: #ffffff;
+
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+.training-restart-button:hover {
+  background: #53684f;
+}
+
+.training-session-panel {
+  align-self: start;
+
+  padding: 18px;
+
+  border: 1px solid #dedfd9;
+  border-radius: 9px;
+
+  background: #f8f8f5;
+}
+
+.training-session-panel h3 {
+  margin: 0 0 16px;
+
+  color: #343832;
+  font-size: 1rem;
+}
+
+.training-session-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 10px 0;
+
+  border-bottom: 1px solid #e5e6e1;
+
+  color: #747870;
+
+  font-size: 0.84rem;
+}
+
+.training-session-stat strong {
+  color: #424640;
+}
+
+.training-session-status {
+  margin-top: 16px;
+  padding: 10px;
+
+  border-radius: 6px;
+
+  background: #e9eee6;
+  color: #50604c;
+
+  text-align: center;
+
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/*****************************/
+/* Estilos de error boundary */
+/*****************************/
+
+.error-boundary {
+  min-height: 100vh;
+
+  display: grid;
+  place-items: center;
+
+  padding: 24px;
+
+  background: #f3f1ec;
+}
+
+.error-boundary-card {
+  width: min(480px, 100%);
+
+  padding: 32px;
+
+  border: 1px solid #d9d6ce;
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.12);
+
+  text-align: center;
+}
+
+.error-boundary-icon {
+  display: block;
+
+  margin-bottom: 12px;
+
+  font-size: 2.3rem;
+}
+
+.error-boundary-card h1 {
+  margin: 0 0 10px;
+
+  font-size: 1.25rem;
+}
+
+.error-boundary-card p {
+  margin: 0 0 18px;
+
+  color: #72766f;
+
+  line-height: 1.5;
+}
+
+.error-boundary-message {
+  display: block;
+
+  margin-bottom: 20px;
+  padding: 10px 12px;
+
+  overflow: auto;
+
+  border-radius: 6px;
+
+  background: #f2f2ef;
+  color: #8b3f39;
+
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.error-boundary-card button {
+  padding: 9px 16px;
+
+  border: 1px solid #667d62;
+  border-radius: 6px;
+
+  background: #667d62;
+  color: #ffffff;
+
+  cursor: pointer;
 }
