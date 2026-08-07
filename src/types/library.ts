@@ -1,6 +1,9 @@
 import type {
     StudyContentsMap,
 } from "../types";
+import type {
+    TrainingsMap,
+} from "../training/types";
 
 export type LibraryFolder = {
     id: string;
@@ -39,4 +42,6 @@ export type ChessktopStorage = {
     studyContents: StudyContentsMap;
 
     selectedStudyId: string | null;
+
+    trainings: TrainingsMap;
 };

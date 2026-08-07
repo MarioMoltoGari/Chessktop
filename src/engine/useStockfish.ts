@@ -241,33 +241,8 @@ export function useStockfish({
         activeAnalysisIdRef.current =
             analysisId;
 
-        if (!enabled) {
-            setLines([]);
-            setCurrentDepth(0);
-            setError(null);
-            setStatus("paused");
-
-            service.stop().catch(() => {
-                // Los errores del Worker se gestionan en subscribeToErrors().
-            });
-
-            return;
-        }
-
-        analysisFenRef.current = fen;
-
-        setLines([]);
-        setCurrentDepth(0);
-        setError(null);
-        setStatus("analyzing");
-
-        service
-            .analyze({
-                fen,
-                depth,
-                multiPv,
-            })
-            .catch((analysisError) => {
+        const uiTimeoutId =
+            window.setTimeout(() => {
                 if (
                     activeAnalysisIdRef.current !==
                     analysisId
@@ -275,19 +250,77 @@ export function useStockfish({
                     return;
                 }
 
-                console.error(
-                    "No se pudo analizar la posición:",
-                    analysisError,
+                setLines([]);
+                setCurrentDepth(0);
+                setError(null);
+
+                setStatus(
+                    enabled
+                        ? "analyzing"
+                        : "paused",
+                );
+            }, 0);
+
+        if (!enabled) {
+            service
+                .stop()
+                .catch(() => {
+                    /*
+                     * Los errores del Worker se gestionan
+                     * en subscribeToErrors().
+                     */
+                });
+
+            return () => {
+                window.clearTimeout(
+                    uiTimeoutId,
                 );
 
-                setError(
-                    "No se pudo analizar la posición.",
-                );
+                if (
+                    activeAnalysisIdRef.current ===
+                    analysisId
+                ) {
+                    activeAnalysisIdRef.current =
+                        null;
+                }
+            };
+        }
 
-                setStatus("error");
-            });
+        analysisFenRef.current = fen;
+
+        service
+            .analyze({
+                fen,
+                depth,
+                multiPv,
+            })
+            .catch(
+                (analysisError) => {
+                    if (
+                        activeAnalysisIdRef.current !==
+                        analysisId
+                    ) {
+                        return;
+                    }
+
+                    console.error(
+                        "No se pudo analizar la posición:",
+                        analysisError,
+                    );
+
+                    setError(
+                        "No se pudo analizar la posición.",
+                    );
+
+                    setStatus("error");
+                },
+            );
 
         return () => {
+            window.clearTimeout(
+                uiTimeoutId,
+            );
+
             if (
                 activeAnalysisIdRef.current ===
                 analysisId

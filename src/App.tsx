@@ -22,6 +22,17 @@ import {
 import { exportLibrary, readLibraryBackup } from "./utils/export";
 import StockfishPanel from "./components/engine/StockfishPanel";
 import Toast from "./components/Toast";
+import type {
+  TrainingsMap,
+} from "./training/types";
+// import {
+//   addTraining,
+//   createTraining,
+// } from "./training/trainingService";
+
+// import type {
+//   TrainingSide,
+// } from "./training/types";
 
 type MoveNode = {
   id: string;
@@ -410,10 +421,13 @@ type InitialAppState = {
   library: LibraryState;
   studyContents: StudyContentsMap;
   selectedStudyId: string | null;
+  trainings: TrainingsMap;
 };
 
 function loadAppState(): InitialAppState {
   const storedState = loadChessktopState();
+  const trainings =
+    storedState?.trainings ?? {};
 
   const library =
     storedState?.library ?? defaultLibrary;
@@ -451,6 +465,7 @@ function loadAppState(): InitialAppState {
     library,
     studyContents,
     selectedStudyId,
+    trainings,
   };
 }
 
@@ -463,7 +478,7 @@ function App() {
 
   const [library, setLibrary] = useState<LibraryState>(
     initialState.library,
-);
+  );
 
   const [
     selectedStudyId,
@@ -477,6 +492,13 @@ function App() {
     setStudyContents,
   ] = useState<StudyContentsMap>(
     initialState.studyContents,
+  );
+
+  const [
+    trainings,
+    setTrainings,
+  ] = useState<TrainingsMap>(
+    initialState.trainings,
   );
 
   const [pgnCopied, setPgnCopied] =
@@ -566,6 +588,7 @@ function App() {
       library,
       studyContents,
       selectedStudyId,
+      trainings,
     };
 
     saveChessktopState(stateToSave);
@@ -573,15 +596,63 @@ function App() {
     library,
     studyContents,
     selectedStudyId,
+    trainings,
   ]);
 
   useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(
+          toastTimeoutRef.current,
+        );
+      }
+    };
+  }, []);
+
+  /*
+  function handleCreateTraining(
+    studyId: string,
+    name: string,
+    side: TrainingSide,
+  ) {
+    const training =
+      createTraining({
+        studyId,
+        name,
+        side,
+
+        mode: "all-lines",
+        order: "random",
+      });
+
+    setTrainings(
+      (previousTrainings) =>
+        addTraining(
+          previousTrainings,
+          training,
+        ),
+    );
+  }
+  */
+
+  function handleLibraryChange(
+    nextLibrary: LibraryState,
+  ) {
     const validStudyIds = new Set(
-      library.studies.map(
+      nextLibrary.studies.map(
         (study) => study.id,
       ),
     );
 
+    /*
+     * Actualizamos primero la biblioteca.
+     */
+    setLibrary(nextLibrary);
+
+    /*
+     * Eliminamos el contenido perteneciente
+     * a estudios que ya no existen.
+     */
     setStudyContents(
       (previousContents) => {
         const cleanedContents:
@@ -608,38 +679,67 @@ function App() {
           : previousContents;
       },
     );
-  }, [library.studies]);
 
-  useEffect(() => {
-    if (!selectedStudyId) {
-      return;
-    }
+    /*
+     * IMPORTANTE PARA ENTRENAMIENTOS:
+     *
+     * Si desaparece un estudio, también
+     * eliminamos sus entrenamientos asociados.
+     */
+    setTrainings(
+      (previousTrainings) => {
+        const nextTrainings:
+          TrainingsMap = {};
 
-    const selectedStudyStillExists =
-      library.studies.some(
-        (study) =>
-          study.id === selectedStudyId,
-      );
+        let trainingsChanged = false;
 
-    if (!selectedStudyStillExists) {
+        for (const [
+          trainingId,
+          training,
+        ] of Object.entries(
+          previousTrainings,
+        )) {
+          if (
+            validStudyIds.has(
+              training.studyId,
+            )
+          ) {
+            nextTrainings[
+              trainingId
+            ] = training;
+          } else {
+            trainingsChanged = true;
+          }
+        }
+
+        return trainingsChanged
+          ? nextTrainings
+          : previousTrainings;
+      },
+    );
+
+    /*
+     * Si el estudio actualmente seleccionado
+     * deja de existir, elegimos otro.
+     *
+     * LibrarySidebar ya intenta hacerlo al borrar,
+     * pero esta comprobación protege App frente
+     * a cualquier cambio futuro de biblioteca.
+     */
+    if (
+      selectedStudyId &&
+      !validStudyIds.has(
+        selectedStudyId,
+      )
+    ) {
       setSelectedStudyId(
-        library.studies[0]?.id ?? null,
+        nextLibrary.studies[0]?.id ??
+        null,
       );
-    }
-  }, [
-    library.studies,
-    selectedStudyId,
-  ]);
 
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        window.clearTimeout(
-          toastTimeoutRef.current,
-        );
-      }
-    };
-  }, []);
+      closeNote();
+    }
+  }
 
   function showToast(
     message: string,
@@ -717,6 +817,7 @@ function App() {
       library,
       studyContents,
       selectedStudyId,
+      trainings,
     });
   }
 
@@ -1103,7 +1204,7 @@ function App() {
         <LibrarySidebar
           library={library}
           selectedStudyId={selectedStudyId}
-          onLibraryChange={setLibrary}
+          onLibraryChange={handleLibraryChange}
           onStudySelect={selectStudy}
           onExportLibrary={handleExportLibrary}
           onImportLibrary={handleImportLibrary}
