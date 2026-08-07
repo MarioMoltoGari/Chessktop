@@ -3,7 +3,7 @@ import type {
 } from "../types";
 import type {
     TrainingsMap,
-} from "../training/types";
+} from "../components/training/types";
 
 export type LibraryFolder = {
     id: string;

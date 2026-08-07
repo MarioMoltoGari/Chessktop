@@ -23,16 +23,18 @@ import { exportLibrary, readLibraryBackup } from "./utils/export";
 import StockfishPanel from "./components/engine/StockfishPanel";
 import Toast from "./components/Toast";
 import type {
+  TrainingMode,
+  TrainingOrder,
+  TrainingSide,
   TrainingsMap,
-} from "./training/types";
-// import {
-//   addTraining,
-//   createTraining,
-// } from "./training/trainingService";
-
-// import type {
-//   TrainingSide,
-// } from "./training/types";
+} from "./components/training/types";
+import {
+  addTraining,
+  createTraining,
+  deleteTraining,
+  renameTraining,
+} from "./components/training/trainingService";
+import TrainingWorkspace from "./components/training/TrainingWorkspace";
 
 type MoveNode = {
   id: string;
@@ -501,6 +503,30 @@ function App() {
     initialState.trainings,
   );
 
+  const [
+    selectedTrainingId,
+    setSelectedTrainingId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const selectedTraining =
+    selectedTrainingId
+      ? trainings[
+      selectedTrainingId
+      ] ?? null
+      : null;
+
+
+  const trainingStudy =
+    selectedTraining
+      ? library.studies.find(
+        (study) =>
+          study.id ===
+          selectedTraining.studyId,
+      ) ?? null
+      : null;
+
   const [pgnCopied, setPgnCopied] =
     useState(false);
 
@@ -609,20 +635,74 @@ function App() {
     };
   }, []);
 
-  /*
+  function openTraining(
+    trainingId: string,
+  ) {
+    const training =
+      trainings[trainingId];
+
+    if (!training) {
+      return;
+    }
+
+    selectStudy(
+      training.studyId,
+      true
+    );
+
+    setSelectedTrainingId(
+      trainingId,
+    );
+  }
+
+  function handleRenameTraining(
+    trainingId: string,
+    name: string,
+  ) {
+    setTrainings(
+      (previousTrainings) =>
+        renameTraining(
+          previousTrainings,
+          trainingId,
+          name,
+        ),
+    );
+
+    showToast(
+      "Entrenamiento renombrado.",
+    );
+  }
+
+  function handleDeleteTraining(
+    trainingId: string,
+  ) {
+    setTrainings(
+      (previousTrainings) =>
+        deleteTraining(
+          previousTrainings,
+          trainingId,
+        ),
+    );
+
+    showToast(
+      "Entrenamiento eliminado.",
+    );
+  }
+
   function handleCreateTraining(
     studyId: string,
     name: string,
     side: TrainingSide,
+    mode: TrainingMode,
+    order: TrainingOrder,
   ) {
     const training =
       createTraining({
         studyId,
         name,
         side,
-
-        mode: "all-lines",
-        order: "random",
+        mode,
+        order,
       });
 
     setTrainings(
@@ -632,8 +712,13 @@ function App() {
           training,
         ),
     );
+
+    showToast(
+      "Entrenamiento creado correctamente.",
+    );
+
+    return training;
   }
-  */
 
   function handleLibraryChange(
     nextLibrary: LibraryState,
@@ -823,7 +908,15 @@ function App() {
 
   function selectStudy(
     nextStudyId: string | null,
+    keepTraining = false,
   ) {
+
+    if (!keepTraining) {
+      setSelectedTrainingId(
+        null,
+      );
+    }
+
     if (!nextStudyId) {
       setSelectedStudyId(null);
       closeNote();
@@ -1203,254 +1296,278 @@ function App() {
       <section className="workspace">
         <LibrarySidebar
           library={library}
+          trainings={trainings}
           selectedStudyId={selectedStudyId}
           onLibraryChange={handleLibraryChange}
           onStudySelect={selectStudy}
           onExportLibrary={handleExportLibrary}
           onImportLibrary={handleImportLibrary}
+          onCreateTraining={handleCreateTraining}
+          onOpenTraining={openTraining}
+          onRenameTraining={handleRenameTraining}
+          onDeleteTraining={handleDeleteTraining}
         />
-        <div className="board-section">
-          <div className="board-section">
-            <StockfishPanel
-              fen={position}
-              hasActiveStudy={
-                selectedStudyId !== null
-              }
-            />
-            {/* controles */}
-          </div>
-          <div className="board-container">
-            <Chessboard
-              options={{
-                position,
-
-                onPieceDrop: ({
-                  sourceSquare,
-                  targetSquare,
-                }) => {
-                  if (
-                    !selectedStudyId ||
-                    !targetSquare
-                  ) {
-                    showToast(
-                      "Selecciona o crea un estudio para utilizar el tablero.",
-                      3000,
-                    );
-                    return false;
+        {selectedTraining &&
+          trainingStudy ? (
+          <TrainingWorkspace
+            training={
+              selectedTraining
+            }
+            studyName={
+              trainingStudy.name
+            }
+            onClose={() =>
+              setSelectedTrainingId(
+                null,
+              )
+            }
+          />
+        ) : (
+          <>
+            <div className="board-section">
+              <div className="board-section">
+                <StockfishPanel
+                  fen={position}
+                  hasActiveStudy={
+                    selectedStudyId !== null
                   }
+                />
+                {/* controles */}
+              </div>
+              <div className="board-container">
+                <Chessboard
+                  options={{
+                    position,
 
-                  return makeMove(
-                    sourceSquare,
-                    targetSquare,
-                  );
-                },
+                    onPieceDrop: ({
+                      sourceSquare,
+                      targetSquare,
+                    }) => {
+                      if (
+                        !selectedStudyId ||
+                        !targetSquare
+                      ) {
+                        showToast(
+                          "Selecciona o crea un estudio para utilizar el tablero.",
+                          3000,
+                        );
+                        return false;
+                      }
 
-                boardStyle: {
-                  borderRadius: "8px",
-                  boxShadow:
-                    "0 8px 24px rgba(0, 0, 0, 0.16)",
-                },
+                      return makeMove(
+                        sourceSquare,
+                        targetSquare,
+                      );
+                    },
 
-                lightSquareStyle: {
-                  backgroundColor: "#e8e1d1",
-                },
+                    boardStyle: {
+                      borderRadius: "8px",
+                      boxShadow:
+                        "0 8px 24px rgba(0, 0, 0, 0.16)",
+                    },
 
-                darkSquareStyle: {
-                  backgroundColor: "#77906f",
-                },
-              }}
-            />
-          </div>
+                    lightSquareStyle: {
+                      backgroundColor: "#e8e1d1",
+                    },
 
-          <div className="board-controls">
-            <button
-              type="button"
-              onClick={goToStart}
-              disabled={currentNodeId === "root"}
-            >
-              Inicio
-            </button>
+                    darkSquareStyle: {
+                      backgroundColor: "#77906f",
+                    },
+                  }}
+                />
+              </div>
 
-            <button
-              type="button"
-              onClick={goToPreviousMove}
-              disabled={currentNodeId === "root"}
-            >
-              Anterior
-            </button>
-
-            <button
-              type="button"
-              onClick={goToNextMove}
-              disabled={
-                nodes[currentNodeId]?.children
-                  .length === 0
-              }
-            >
-              Siguiente
-            </button>
-
-            <button
-              type="button"
-              onClick={deleteCurrentBranch}
-              disabled={currentNodeId === "root"}
-            >
-              Borrar rama
-            </button>
-
-            <button
-              type="button"
-              onClick={resetGame}
-              disabled={
-                nodes.root.children.length === 0
-              }
-            >
-              Reiniciar
-            </button>
-          </div>
-        </div>
-
-        <aside className="moves-panel">
-          <h2>Movimientos</h2>
-
-          <div className="moves-table-header">
-            <span>N.º</span>
-            <span>Blancas</span>
-            <span>Negras</span>
-            <span aria-label="Notas" />
-          </div>
-
-          {moveRows.length === 0 ? (
-            <p className="empty-message">
-              Todavía no hay movimientos.
-            </p>
-          ) : (
-            <div className="moves-table">
-              {moveRows.map((row) => (
-                <div
-                  className="move-group"
-                  key={row.moveNumber}
+              <div className="board-controls">
+                <button
+                  type="button"
+                  onClick={goToStart}
+                  disabled={currentNodeId === "root"}
                 >
-                  <div className="move-row">
-                    <span className="move-number">
-                      {row.moveNumber}.
-                    </span>
+                  Inicio
+                </button>
 
-                    {row.whiteMove ? (
-                      <button
-                        type="button"
-                        className={`move-button ${currentNodeId === row.whiteMove.id
-                          ? "active"
-                          : ""
-                          }`}
-                        onClick={() =>
-                          goToMove(row.whiteMove.id)
-                        }
-                      >
-                        {row.whiteMove.san}
-                      </button>
-                    ) : (
-                      <span />
-                    )}
+                <button
+                  type="button"
+                  onClick={goToPreviousMove}
+                  disabled={currentNodeId === "root"}
+                >
+                  Anterior
+                </button>
 
-                    {row.blackMove ? (
-                      <button
-                        type="button"
-                        className={`move-button ${currentNodeId === row.blackMove.id
-                          ? "active"
-                          : ""
-                          }`}
-                        onClick={() =>
-                          goToMove(row.blackMove.id)
-                        }
-                      >
-                        {row.blackMove.san}
-                      </button>
-                    ) : (
-                      <span className="empty-black-move" />
-                    )}
+                <button
+                  type="button"
+                  onClick={goToNextMove}
+                  disabled={
+                    nodes[currentNodeId]?.children
+                      .length === 0
+                  }
+                >
+                  Siguiente
+                </button>
 
-                    <NoteButton
-                      node={row.blackMove ?? row.whiteMove}
-                      onClick={openNote}
-                    />
-                  </div>
-                  {row.whiteMove?.children
-                    .slice(1)
-                    .map((variationId) => (
-                      <VariationLine
-                        key={variationId}
-                        firstNodeId={variationId}
-                        nodes={nodes}
-                        currentNodeId={currentNodeId}
-                        onMoveClick={goToMove}
-                        onNoteClick={openNote}
-                      />
-                    ))}
+                <button
+                  type="button"
+                  onClick={deleteCurrentBranch}
+                  disabled={currentNodeId === "root"}
+                >
+                  Borrar rama
+                </button>
 
-                  {row.blackMove?.children
-                    .slice(1)
-                    .map((variationId) => (
-                      <VariationLine
-                        key={variationId}
-                        firstNodeId={variationId}
-                        nodes={nodes}
-                        currentNodeId={currentNodeId}
-                        onMoveClick={goToMove}
-                        onNoteClick={openNote}
-                      />
-                    ))}
+                <button
+                  type="button"
+                  onClick={resetGame}
+                  disabled={
+                    nodes.root.children.length === 0
+                  }
+                >
+                  Reiniciar
+                </button>
+              </div>
+            </div>
+
+            <aside className="moves-panel">
+              <h2>Movimientos</h2>
+
+              <div className="moves-table-header">
+                <span>N.º</span>
+                <span>Blancas</span>
+                <span>Negras</span>
+                <span aria-label="Notas" />
+              </div>
+
+              {moveRows.length === 0 ? (
+                <p className="empty-message">
+                  Todavía no hay movimientos.
+                </p>
+              ) : (
+                <div className="moves-table">
+                  {moveRows.map((row) => (
+                    <div
+                      className="move-group"
+                      key={row.moveNumber}
+                    >
+                      <div className="move-row">
+                        <span className="move-number">
+                          {row.moveNumber}.
+                        </span>
+
+                        {row.whiteMove ? (
+                          <button
+                            type="button"
+                            className={`move-button ${currentNodeId === row.whiteMove.id
+                              ? "active"
+                              : ""
+                              }`}
+                            onClick={() =>
+                              goToMove(row.whiteMove.id)
+                            }
+                          >
+                            {row.whiteMove.san}
+                          </button>
+                        ) : (
+                          <span />
+                        )}
+
+                        {row.blackMove ? (
+                          <button
+                            type="button"
+                            className={`move-button ${currentNodeId === row.blackMove.id
+                              ? "active"
+                              : ""
+                              }`}
+                            onClick={() =>
+                              goToMove(row.blackMove.id)
+                            }
+                          >
+                            {row.blackMove.san}
+                          </button>
+                        ) : (
+                          <span className="empty-black-move" />
+                        )}
+
+                        <NoteButton
+                          node={row.blackMove ?? row.whiteMove}
+                          onClick={openNote}
+                        />
+                      </div>
+                      {row.whiteMove?.children
+                        .slice(1)
+                        .map((variationId) => (
+                          <VariationLine
+                            key={variationId}
+                            firstNodeId={variationId}
+                            nodes={nodes}
+                            currentNodeId={currentNodeId}
+                            onMoveClick={goToMove}
+                            onNoteClick={openNote}
+                          />
+                        ))}
+
+                      {row.blackMove?.children
+                        .slice(1)
+                        .map((variationId) => (
+                          <VariationLine
+                            key={variationId}
+                            firstNodeId={variationId}
+                            nodes={nodes}
+                            currentNodeId={currentNodeId}
+                            onMoveClick={goToMove}
+                            onNoteClick={openNote}
+                          />
+                        ))}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          <div className="position-information">
-            <h3>Posición actual</h3>
+              <div className="position-information">
+                <h3>Posición actual</h3>
 
-            <p>
-              Turno:{" "}
-              <strong>
-                {game.turn() === "w"
-                  ? "Blancas"
-                  : "Negras"}
-              </strong>
-            </p>
+                <p>
+                  Turno:{" "}
+                  <strong>
+                    {game.turn() === "w"
+                      ? "Blancas"
+                      : "Negras"}
+                  </strong>
+                </p>
 
-            <p>
-              Jugada seleccionada:{" "}
-              <strong>
-                {currentNodeId === "root"
-                  ? "Posición inicial"
-                  : `${Math.ceil(
-                    currentNode.ply / 2,
-                  )}${currentNode.ply % 2 === 1
-                    ? "."
-                    : "..."
-                  } ${currentNode.san}`}
-              </strong>
-            </p>
+                <p>
+                  Jugada seleccionada:{" "}
+                  <strong>
+                    {currentNodeId === "root"
+                      ? "Posición inicial"
+                      : `${Math.ceil(
+                        currentNode.ply / 2,
+                      )}${currentNode.ply % 2 === 1
+                        ? "."
+                        : "..."
+                      } ${currentNode.san}`}
+                  </strong>
+                </p>
 
-            <div className="export-row">
-              <span className="export-description">
-                Exportar el árbol completo
-              </span>
+                <div className="export-row">
+                  <span className="export-description">
+                    Exportar el árbol completo
+                  </span>
 
-              <button
-                type="button"
-                className="pgn-button"
-                onClick={copyPgn}
-                disabled={
-                  nodes.root.children.length === 0
-                }
-              >
-                {pgnCopied
-                  ? "PGN copiado"
-                  : "Copiar PGN"}
-              </button>
-            </div>
-          </div>
-        </aside>
+                  <button
+                    type="button"
+                    className="pgn-button"
+                    onClick={copyPgn}
+                    disabled={
+                      nodes.root.children.length === 0
+                    }
+                  >
+                    {pgnCopied
+                      ? "PGN copiado"
+                      : "Copiar PGN"}
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </>
+        )}
       </section>
 
       {noteNodeId && nodes[noteNodeId] && (

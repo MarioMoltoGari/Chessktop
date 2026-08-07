@@ -8,6 +8,8 @@ import ContextMenu, {
     type ContextMenuItem,
 } from "./library/ContextMenu";
 import MoveLibraryItemDialog from "./library/MoveLibraryItemDialog";
+import type { TrainingMode, TrainingOrder, TrainingSide, TrainingsMap, Training } from "./training/types";
+import CreateTrainingDialog from "./training/CreateTrainingDialog";
 
 type LibrarySidebarProps = {
     library: LibraryState;
@@ -18,6 +20,26 @@ type LibrarySidebarProps = {
     onExportLibrary: () => void;
     onImportLibrary: (
         file: File,
+    ) => void;
+    onCreateTraining: (
+        studyId: string,
+        name: string,
+        side: TrainingSide,
+        mode: TrainingMode,
+        order: TrainingOrder,
+    ) => void;
+    trainings: TrainingsMap;
+    onOpenTraining: (
+        trainingId: string,
+    ) => void;
+
+    onRenameTraining: (
+        trainingId: string,
+        name: string,
+    ) => void;
+
+    onDeleteTraining: (
+        trainingId: string,
     ) => void;
 };
 
@@ -39,6 +61,8 @@ type FolderNodeProps = {
         event: React.MouseEvent,
         target: LibraryContextTarget,
     ) => void;
+    trainings: TrainingsMap;
+    onOpenTraining: (trainingId: string) => void;
 };
 
 type LibraryContextTarget =
@@ -49,6 +73,10 @@ type LibraryContextTarget =
     | {
         type: "study";
         id: string;
+    }
+    | {
+        type: "training";
+        id: string;
     };
 
 type LibraryContextMenuState = {
@@ -57,10 +85,143 @@ type LibraryContextMenuState = {
     target: LibraryContextTarget;
 };
 
+type StudyNodeProps = {
+    study: ChessStudy;
+    trainings: Training[];
+
+    selectedStudyId: string | null;
+
+    depth: number;
+    deleteMode: boolean;
+
+    onSelectStudy: (
+        studyId: string,
+    ) => void;
+
+    onDeleteStudy: (
+        studyId: string,
+    ) => void;
+
+    onOpenContextMenu: (
+        event: React.MouseEvent,
+        target: LibraryContextTarget,
+    ) => void;
+
+    onOpenTraining: (
+        trainingId: string,
+    ) => void;
+};
+
+function StudyNode({
+    study,
+    trainings,
+    selectedStudyId,
+    depth,
+    deleteMode,
+    onSelectStudy,
+    onDeleteStudy,
+    onOpenContextMenu,
+    onOpenTraining,
+}: StudyNodeProps) {
+    return (
+        <div className="library-study-node">
+            <button
+                type="button"
+                className={`library-study-row ${selectedStudyId === study.id
+                    ? "active"
+                    : ""
+                    } ${deleteMode
+                        ? "delete-mode"
+                        : ""
+                    }`}
+                style={{
+                    paddingLeft:
+                        `${depth * 16 + 34}px`,
+                }}
+                onContextMenu={(event) =>
+                    onOpenContextMenu(
+                        event,
+                        {
+                            type: "study",
+                            id: study.id,
+                        },
+                    )
+                }
+                onClick={() => {
+                    if (deleteMode) {
+                        onDeleteStudy(
+                            study.id,
+                        );
+
+                        return;
+                    }
+
+                    onSelectStudy(
+                        study.id,
+                    );
+                }}
+            >
+                <span aria-hidden="true">
+                    {deleteMode
+                        ? "🗑️"
+                        : "♟"}
+                </span>
+
+                <span>{study.name}</span>
+            </button>
+
+            {!deleteMode &&
+                trainings.map(
+                    (training) => (
+                        <button
+                            key={training.id}
+                            type="button"
+                            className="library-training-row"
+                            style={{
+                                paddingLeft:
+                                    `${depth * 16 + 58
+                                    }px`,
+                            }}
+                            onClick={() =>
+                                onOpenTraining(
+                                    training.id,
+                                )
+                            }
+                            onContextMenu={(event) =>
+                                onOpenContextMenu(
+                                    event,
+                                    {
+                                        type: "training",
+                                        id: training.id,
+                                    },
+                                )
+                            }
+                            title={
+                                training.name
+                            }
+                        >
+                            <span
+                                className="library-training-icon"
+                                aria-hidden="true"
+                            >
+                                🏋
+                            </span>
+
+                            <span>
+                                {training.name}
+                            </span>
+                        </button>
+                    ),
+                )}
+        </div>
+    );
+}
+
 function FolderNode({
     folder,
     folders,
     studies,
+    trainings,
     selectedStudyId,
     depth,
     deleteMode,
@@ -71,6 +232,7 @@ function FolderNode({
     onDeleteFolder,
     onDeleteStudy,
     onOpenContextMenu,
+    onOpenTraining,
 }: FolderNodeProps) {
     const childFolders = folders.filter(
         (candidate) => candidate.parentId === folder.id,
@@ -195,40 +357,48 @@ function FolderNode({
                             onOpenContextMenu={
                                 onOpenContextMenu
                             }
+                            onOpenTraining={onOpenTraining}
+                            trainings={trainings}
                         />
                     ))}
 
-                    {childStudies.map((study) => (
-                        <button
-                            type="button"
-                            key={study.id}
-                            className={`library-study-row ${selectedStudyId === study.id ? "active" : ""
-                                } ${deleteMode ? "delete-mode" : ""}`}
-                            style={{
-                                paddingLeft: `${(depth + 1) * 16 + 34}px`,
-                            }}
-                            onContextMenu={(event) =>
-                                onOpenContextMenu(event, {
-                                    type: "study",
-                                    id: study.id,
-                                })
-                            }
-                            onClick={() => {
-                                if (deleteMode) {
-                                    onDeleteStudy(study.id);
-                                    return;
+                    {childStudies.map((study) => {
+                        const studyTrainings =
+                            Object.values(
+                                trainings,
+                            ).filter(
+                                (training) =>
+                                    training.studyId ===
+                                    study.id,
+                            );
+
+                        return (
+                            <StudyNode
+                                key={study.id}
+                                study={study}
+                                trainings={
+                                    studyTrainings
                                 }
-
-                                onSelectStudy(study.id);
-                            }}
-                        >
-                            <span aria-hidden="true">
-                                {deleteMode ? "🗑️" : "♟"}
-                            </span>
-
-                            <span>{study.name}</span>
-                        </button>
-                    ))}
+                                selectedStudyId={
+                                    selectedStudyId
+                                }
+                                depth={depth + 1}
+                                deleteMode={
+                                    deleteMode
+                                }
+                                onSelectStudy={
+                                    onSelectStudy
+                                }
+                                onDeleteStudy={
+                                    onDeleteStudy
+                                }
+                                onOpenContextMenu={
+                                    onOpenContextMenu
+                                }
+                                onOpenTraining={onOpenTraining}
+                            />
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -255,11 +425,16 @@ function getDescendantFolderIds(
 
 export default function LibrarySidebar({
     library,
+    trainings,
     selectedStudyId,
     onLibraryChange,
     onStudySelect,
     onExportLibrary,
     onImportLibrary,
+    onCreateTraining,
+    onOpenTraining,
+    onRenameTraining,
+    onDeleteTraining,
 }: LibrarySidebarProps) {
     const [search, setSearch] = useState("");
     const [deleteMode, setDeleteMode] = useState(false);
@@ -269,6 +444,17 @@ export default function LibrarySidebar({
     ] = useState<
         LibraryContextMenuState | null
     >(null);
+    const [
+        trainingStudyId,
+        setTrainingStudyId,
+    ] = useState<string | null>(null);
+    const trainingStudy =
+        trainingStudyId
+            ? library.studies.find(
+                (study) =>
+                    study.id === trainingStudyId,
+            ) ?? null
+            : null;
     const [
         moveTarget,
         setMoveTarget,
@@ -300,6 +486,62 @@ export default function LibrarySidebar({
     const rootStudies = visibleStudies.filter(
         (study) => study.folderId === null,
     );
+
+    function deleteTrainingFromMenu(
+        trainingId: string,
+    ) {
+        const training =
+            trainings[trainingId];
+
+        if (!training) {
+            return;
+        }
+
+        const confirmed =
+            window.confirm(
+                `¿Quieres borrar el entrenamiento "${training.name}"?`,
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        onDeleteTraining(
+            trainingId,
+        );
+    }
+
+    function renameTrainingFromMenu(
+        trainingId: string,
+    ) {
+        const training =
+            trainings[trainingId];
+
+        if (!training) {
+            return;
+        }
+
+        const name = window.prompt(
+            "Nuevo nombre del entrenamiento:",
+            training.name,
+        );
+
+        const trimmedName =
+            name?.trim();
+
+        if (
+            !trimmedName ||
+            trimmedName ===
+            training.name
+        ) {
+            return;
+        }
+
+        onRenameTraining(
+            trainingId,
+            trimmedName,
+        );
+    }
 
     function openContextMenu(
         event: React.MouseEvent,
@@ -832,51 +1074,102 @@ export default function LibrarySidebar({
             ];
         }
 
-        return [
-            {
-                id: "open-study",
-                label: "Abrir",
-                onClick: () =>
-                    openStudy(target.id),
-            },
-            {
-                id: "rename-study",
-                label: "Renombrar",
-                separatorBefore: true,
-                onClick: () =>
-                    renameStudy(target.id),
-            },
-            {
-                id: "move-study",
-                label: "Mover a...",
-                onClick: () =>
-                    openMoveDialog({
-                        type: "study",
-                        id: target.id,
-                    }),
-            },
-            {
-                id: "duplicate-study",
-                label: "Duplicar",
-                disabled: true,
-                separatorBefore: true,
-                onClick: () => { },
-            },
-            {
-                id: "export-study",
-                label: "Exportar PGN",
-                disabled: true,
-                onClick: () => { },
-            },
-            {
-                id: "delete-study",
-                label: "Eliminar",
-                danger: true,
-                separatorBefore: true,
-                onClick: () =>
-                    deleteStudy(target.id),
-            },
-        ];
+        if (target.type === "study") {
+            return [
+                {
+                    id: "open-study",
+                    label: "Abrir",
+                    onClick: () =>
+                        openStudy(target.id),
+                },
+                {
+                    id: "new-training",
+                    label: "Nuevo entrenamiento",
+                    separatorBefore: true,
+                    onClick: () =>
+                        setTrainingStudyId(
+                            target.id,
+                        ),
+                },
+                {
+                    id: "rename-study",
+                    label: "Renombrar",
+                    separatorBefore: true,
+                    onClick: () =>
+                        renameStudy(target.id),
+                },
+                {
+                    id: "move-study",
+                    label: "Mover a...",
+                    onClick: () =>
+                        openMoveDialog({
+                            type: "study",
+                            id: target.id,
+                        }),
+                },
+                {
+                    id: "duplicate-study",
+                    label: "Duplicar",
+                    disabled: true,
+                    separatorBefore: true,
+                    onClick: () => { },
+                },
+                {
+                    id: "export-study",
+                    label: "Exportar PGN",
+                    disabled: true,
+                    onClick: () => { },
+                },
+                {
+                    id: "delete-study",
+                    label: "Eliminar",
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () =>
+                        deleteStudy(target.id),
+                },
+            ];
+        }
+
+        if (target.type === "training") {
+            return [
+                {
+                    id: "open-training",
+                    label: "Abrir",
+                    onClick: () =>
+                        onOpenTraining(
+                            target.id,
+                        ),
+                },
+                {
+                    id: "rename-training",
+                    label: "Renombrar",
+                    separatorBefore: true,
+                    onClick: () =>
+                        renameTrainingFromMenu(
+                            target.id,
+                        ),
+                },
+                {
+                    id: "duplicate-training",
+                    label: "Duplicar",
+                    disabled: true,
+                    onClick: () => { },
+                },
+                {
+                    id: "delete-training",
+                    label: "Eliminar",
+                    danger: true,
+                    separatorBefore: true,
+                    onClick: () =>
+                        deleteTrainingFromMenu(
+                            target.id,
+                        ),
+                },
+            ];
+        }
+
+        return [];
     }
 
     return (
@@ -961,39 +1254,48 @@ export default function LibrarySidebar({
                         onDeleteFolder={deleteFolder}
                         onDeleteStudy={deleteStudy}
                         onOpenContextMenu={openContextMenu}
+                        trainings={trainings}
+                        onOpenTraining={onOpenTraining}
                     />
                 ))}
 
-                {rootStudies.map((study) => (
-                    <button
-                        type="button"
-                        key={study.id}
-                        className={`library-study-row root-study ${selectedStudyId === study.id
-                            ? "active"
-                            : ""
-                            } ${deleteMode ? "delete-mode" : ""}`}
-                        onContextMenu={(event) =>
-                            openContextMenu(event, {
-                                type: "study",
-                                id: study.id,
-                            })
-                        }
-                        onClick={() => {
-                            if (deleteMode) {
-                                deleteStudy(study.id);
-                                return;
+                {rootStudies.map((study) => {
+                    const studyTrainings =
+                        Object.values(
+                            trainings,
+                        ).filter(
+                            (training) =>
+                                training.studyId ===
+                                study.id,
+                        );
+
+                    return (
+                        <StudyNode
+                            key={study.id}
+                            study={study}
+                            trainings={
+                                studyTrainings
                             }
-
-                            onStudySelect(study.id);
-                        }}
-                    >
-                        <span aria-hidden="true">
-                            {deleteMode ? "🗑️" : "♟"}
-                        </span>
-
-                        <span>{study.name}</span>
-                    </button>
-                ))}
+                            selectedStudyId={
+                                selectedStudyId
+                            }
+                            depth={0}
+                            deleteMode={
+                                deleteMode
+                            }
+                            onSelectStudy={
+                                onStudySelect
+                            }
+                            onDeleteStudy={
+                                deleteStudy
+                            }
+                            onOpenContextMenu={
+                                openContextMenu
+                            }
+                            onOpenTraining={onOpenTraining}
+                        />
+                    );
+                })}
 
                 {library.folders.length === 0 &&
                     library.studies.length === 0 && (
@@ -1043,6 +1345,28 @@ export default function LibrarySidebar({
                     }}
                 />
             </div>
+            {trainingStudy && (
+                <CreateTrainingDialog
+                    open
+                    studyName={
+                        trainingStudy.name
+                    }
+                    onCancel={() =>
+                        setTrainingStudyId(null)
+                    }
+                    onCreate={(data) => {
+                        onCreateTraining(
+                            trainingStudy.id,
+                            data.name,
+                            data.side,
+                            data.mode,
+                            data.order,
+                        );
+
+                        setTrainingStudyId(null);
+                    }}
+                />
+            )}
             {contextMenu && (
                 <ContextMenu
                     x={contextMenu.x}
