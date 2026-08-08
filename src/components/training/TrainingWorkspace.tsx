@@ -24,14 +24,14 @@ import {
     createTrainingPosition,
     getOpponentResponses,
     isTrainingSideTurn,
-    // validateTrainingMove,
+    validateTrainingMove,
 } from "../training/trainingGenerator";
 
 import {
     // completeTrainingSession,
     createTrainingSession,
-    // registerCorrectMove,
-    // registerIncorrectMove,
+    registerCorrectMove,
+    registerIncorrectMove,
 } from "../training/trainingSession";
 
 type TrainingWorkspaceProps = {
@@ -131,8 +131,16 @@ export default function TrainingWorkspace({
             );
         });
 
-    const rootNode =
-        studyContent.nodes.root;
+    const currentNode =
+        nodes[
+        session.currentNodeId
+        ] ?? nodes.root;
+
+    const [position, setPosition] =
+        useState(
+            () =>
+                currentNode.fen,
+        );
 
     const [
         feedback,
@@ -147,9 +155,6 @@ export default function TrainingWorkspace({
     //     session.currentNodeId
     //     ] ?? nodes.root;
 
-    const position =
-        rootNode?.fen ?? new Chess().fen();
-
     const trainingPosition =
         createTrainingPosition(
             nodes,
@@ -160,6 +165,113 @@ export default function TrainingWorkspace({
     const userTurn =
         !session.completed &&
         trainingPosition !== null;
+
+    // function makeLocalMove(
+    //     sourceSquare: string,
+    //     targetSquare: string,
+    // ): boolean {
+    //     const game =
+    //         new Chess(position);
+
+    //     try {
+    //         game.move({
+    //             from: sourceSquare,
+    //             to: targetSquare,
+    //             promotion: "q",
+    //         });
+
+    //         setPosition(
+    //             game.fen(),
+    //         );
+
+    //         return true;
+    //     } catch {
+    //         return false;
+    //     }
+    // }
+
+    function makeTrainingMove(
+        sourceSquare: string,
+        targetSquare: string,
+    ): boolean {
+        if (
+            session.completed ||
+            !trainingPosition
+        ) {
+            return false;
+        }
+
+        const game =
+            new Chess(position);
+
+        let attemptedMove;
+
+        try {
+            attemptedMove =
+                game.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    promotion: "q",
+                });
+        } catch {
+            return false;
+        }
+
+        const result =
+            validateTrainingMove(
+                nodes,
+                trainingPosition,
+                attemptedMove.from,
+                attemptedMove.to,
+                attemptedMove.promotion,
+            );
+
+        if (!result.correct) {
+            setSession(
+                (previousSession) =>
+                    registerIncorrectMove(
+                        previousSession,
+                    ),
+            );
+
+            setFeedback({
+                type: "incorrect",
+                message:
+                    "Ese movimiento no está en tu repertorio.",
+            });
+
+            return false;
+        }
+
+        const matchedNode =
+            nodes[
+            result.matchedNodeId
+            ];
+
+        if (!matchedNode) {
+            return false;
+        }
+
+        setPosition(
+            matchedNode.fen,
+        );
+
+        setSession(
+            (previousSession) =>
+                registerCorrectMove(
+                    previousSession,
+                    result.matchedNodeId,
+                ),
+        );
+
+        setFeedback({
+            type: "correct",
+            message:
+                "Movimiento correcto.",
+        });
+
+        return true;
+    }
 
     // function finishSession(
     //     currentSession:
@@ -383,11 +495,20 @@ export default function TrainingWorkspace({
                 studyContent,
             );
 
+        const initialNode =
+            nodes[
+            initialNodeId
+            ] ?? nodes.root;
+
         setSession(
             createTrainingSession(
                 training.id,
                 initialNodeId,
             ),
+        );
+
+        setPosition(
+            initialNode.fen,
         );
 
         setFeedback(null);
@@ -438,6 +559,20 @@ export default function TrainingWorkspace({
                         <Chessboard
                             options={{
                                 position,
+
+                                onPieceDrop: ({
+                                    sourceSquare,
+                                    targetSquare,
+                                }) => {
+                                    if (!targetSquare || !userTurn) {
+                                        return false;
+                                    }
+
+                                    return makeTrainingMove(
+                                        sourceSquare,
+                                        targetSquare,
+                                    );
+                                },
 
                                 boardStyle: {
                                     borderRadius: "8px",
