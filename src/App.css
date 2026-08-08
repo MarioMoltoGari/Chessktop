@@ -1767,11 +1767,13 @@ textarea,
 .training-workspace {
   grid-column: 2 / 4;
 
-  height: var(--side-panel-height);
+  min-height: 0;
+  height: 100%;
 
   padding: 24px;
 
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 
   border: 1px solid #d9d6ce;
   border-radius: 10px;
@@ -1905,24 +1907,6 @@ textarea,
   font-weight: 650;
 }
 
-.training-workspace {
-  grid-column: 2 / 4;
-
-  height: var(--side-panel-height);
-
-  padding: 24px;
-
-  overflow: hidden;
-
-  border: 1px solid #d9d6ce;
-  border-radius: 10px;
-
-  background: #ffffff;
-
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.06);
-}
-
 .training-session-layout {
   display: grid;
 
@@ -1930,11 +1914,13 @@ textarea,
     minmax(420px, 620px) minmax(220px, 300px);
 
   justify-content: center;
+  align-items: start;
   gap: 32px;
 
-  height: calc(100% - 86px);
+  min-height: 0;
 
   padding-top: 22px;
+  padding-bottom: 24px;
 }
 
 .training-board-section {
@@ -1982,7 +1968,8 @@ textarea,
 .training-restart-button {
   align-self: center;
 
-  margin-top: 12px;
+  margin-top: 14px;
+  margin-bottom: 8px;
 
   padding: 9px 16px;
 

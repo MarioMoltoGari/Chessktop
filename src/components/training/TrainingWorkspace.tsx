@@ -28,7 +28,7 @@ import {
 } from "../training/trainingGenerator";
 
 import {
-    // completeTrainingSession,
+    completeTrainingSession,
     createTrainingSession,
     registerCorrectMove,
     registerIncorrectMove,
@@ -252,17 +252,11 @@ export default function TrainingWorkspace({
             return false;
         }
 
-        setPosition(
-            matchedNode.fen,
-        );
-
-        setSession(
-            (previousSession) =>
-                registerCorrectMove(
-                    previousSession,
-                    result.matchedNodeId,
-                ),
-        );
+        const sessionAfterUserMove =
+            registerCorrectMove(
+                session,
+                result.matchedNodeId,
+            );
 
         setFeedback({
             type: "correct",
@@ -270,28 +264,117 @@ export default function TrainingWorkspace({
                 "Movimiento correcto.",
         });
 
+        playOpponentMove(
+            sessionAfterUserMove,
+            result.matchedNodeId,
+        );
+
         return true;
     }
 
-    // function finishSession(
-    //     currentSession:
-    //         TrainingSession,
-    // ) {
-    //     const completedSession =
-    //         completeTrainingSession(
-    //             currentSession,
-    //         );
+    function playOpponentMove(
+        sessionAfterUserMove:
+            TrainingSession,
+        userMoveNodeId: string,
+    ) {
+        const userMoveNode =
+            nodes[userMoveNodeId];
 
-    //     setSession(
-    //         completedSession,
-    //     );
+        if (!userMoveNode) {
+            finishSession(
+                sessionAfterUserMove,
+            );
 
-    //     setFeedback({
-    //         type: "complete",
-    //         message:
-    //             "Entrenamiento completado.",
-    //     });
-    // }
+            return;
+        }
+
+        const opponentResponses =
+            getOpponentResponses(
+                nodes,
+                userMoveNodeId,
+                training,
+            );
+
+        const opponentNodeId =
+            chooseOpponentResponse(
+                opponentResponses,
+                training.order,
+            );
+
+        if (!opponentNodeId) {
+            setPosition(
+                userMoveNode.fen,
+            );
+
+            finishSession(
+                sessionAfterUserMove,
+            );
+
+            return;
+        }
+
+        const opponentNode =
+            nodes[opponentNodeId];
+
+        if (!opponentNode) {
+            finishSession(
+                sessionAfterUserMove,
+            );
+
+            return;
+        }
+
+        setPosition(
+            opponentNode.fen,
+        );
+
+        const sessionAfterOpponent:
+            TrainingSession = {
+            ...sessionAfterUserMove,
+
+            currentNodeId:
+                opponentNodeId,
+        };
+
+        const nextTrainingPosition =
+            createTrainingPosition(
+                nodes,
+                opponentNodeId,
+                training,
+            );
+
+        if (!nextTrainingPosition) {
+            finishSession(
+                sessionAfterOpponent,
+            );
+
+            return;
+        }
+
+        setSession(
+            sessionAfterOpponent,
+        );
+    }
+    
+    function finishSession(
+        currentSession:
+            TrainingSession,
+    ) {
+        const completedSession =
+            completeTrainingSession(
+                currentSession,
+            );
+
+        setSession(
+            completedSession,
+        );
+
+        setFeedback({
+            type: "complete",
+            message:
+                "Entrenamiento completado.",
+        });
+    }
 
     /*
      * Después de una jugada correcta del usuario,
@@ -553,12 +636,25 @@ export default function TrainingWorkspace({
                 </button>
             </header>
 
+            {feedback && (
+                <div
+                    className={`training-feedback ${feedback.type}`}
+                >
+                    {feedback.message}
+                </div>
+            )}
+
             <div className="training-session-layout">
                 <div className="training-board-section">
                     <div className="training-board">
                         <Chessboard
                             options={{
                                 position,
+
+                                boardOrientation:
+                                    training.side === "white"
+                                        ? "white"
+                                        : "black",
 
                                 onPieceDrop: ({
                                     sourceSquare,
@@ -590,14 +686,6 @@ export default function TrainingWorkspace({
                             }}
                         />
                     </div>
-
-                    {feedback && (
-                        <div
-                            className={`training-feedback ${feedback.type}`}
-                        >
-                            {feedback.message}
-                        </div>
-                    )}
 
                     {session.completed && (
                         <button
