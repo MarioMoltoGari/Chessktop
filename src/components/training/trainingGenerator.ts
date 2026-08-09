@@ -1,5 +1,6 @@
 import type {
     Training,
+    TrainingLine,
     TrainingMoveResult,
     TrainingPosition,
     TrainingSide,
@@ -22,6 +23,22 @@ type TrainingNode = {
 type TrainingNodesMap =
     Record<string, TrainingNode>;
 
+/*
+ * Genera un identificador estable para una línea.
+ *
+ * Una misma secuencia de nodos tendrá siempre
+ * exactamente el mismo ID.
+ *
+ * Esto es importante porque TrainingSession
+ * utiliza los IDs para recordar qué líneas
+ * han sido completadas.
+ */
+function createTrainingLineId(
+    nodeIds: string[],
+): string {
+    return nodeIds.join(">");
+}
+
 export function isTrainingSideTurn(
     ply: number,
     side: TrainingSide,
@@ -30,7 +47,6 @@ export function isTrainingSideTurn(
      * ply 0 = posición inicial = juegan blancas
      * ply 1 = después de blancas = juegan negras
      */
-
     const whiteToMove =
         ply % 2 === 0;
 
@@ -64,12 +80,15 @@ function getAllowedChildren(
     ) {
         return node.children.filter(
             (childId) =>
-                Boolean(nodes[childId]),
+                Boolean(
+                    nodes[childId],
+                ),
         );
     }
 
     /*
-     * Solo seguimos siempre el primer hijo.
+     * Línea principal:
+     * seguimos siempre el primer hijo.
      */
     if (
         training.mode ===
@@ -78,22 +97,27 @@ function getAllowedChildren(
         const firstChild =
             node.children[0];
 
-        return firstChild &&
-            nodes[firstChild]
-            ? [firstChild]
-            : [];
+        return (
+            firstChild &&
+                nodes[firstChild]
+                ? [firstChild]
+                : []
+        );
     }
 
     /*
      * selected-lines lo ampliaremos cuando
      * construyamos el selector visual de ramas.
      *
-     * Por ahora permitimos el árbol completo
-     * para que la arquitectura ya soporte el modo.
+     * Por ahora se comporta como all-lines
+     * para que la arquitectura ya soporte
+     * este modo.
      */
     return node.children.filter(
         (childId) =>
-            Boolean(nodes[childId]),
+            Boolean(
+                nodes[childId],
+            ),
     );
 }
 
@@ -109,6 +133,11 @@ export function createTrainingPosition(
         return null;
     }
 
+    /*
+     * Solo creamos una posición entrenable
+     * cuando corresponde mover al lado
+     * elegido por el usuario.
+     */
     if (
         !isTrainingSideTurn(
             node.ply,
@@ -125,6 +154,10 @@ export function createTrainingPosition(
             training,
         );
 
+    /*
+     * Si no existen continuaciones,
+     * la línea ha terminado.
+     */
     if (
         validMoveNodeIds.length === 0
     ) {
@@ -170,6 +203,7 @@ export function validateTrainingMove(
         if (sameMove) {
             return {
                 correct: true,
+
                 matchedNodeId:
                     child.id,
             };
@@ -182,52 +216,199 @@ export function validateTrainingMove(
 }
 
 /*
- * Obtiene las respuestas que puede jugar
- * automáticamente el rival.
+ * Devuelve todas las líneas completas
+ * que parten desde un nodo.
+ *
+ * Cada línea termina cuando encontramos
+ * un nodo sin continuaciones.
  */
-export function getOpponentResponses(
+function collectLinesFromNode(
     nodes: TrainingNodesMap,
     nodeId: string,
-    training: Training,
-): string[] {
+    path: string[],
+    lines: TrainingLine[],
+) {
     const node =
         nodes[nodeId];
 
     if (!node) {
-        return [];
+        return;
     }
 
-    return getAllowedChildren(
-        nodes,
+    const currentPath = [
+        ...path,
         nodeId,
-        training,
-    );
+    ];
+
+    const validChildren =
+        node.children.filter(
+            (childId) =>
+                Boolean(
+                    nodes[childId],
+                ),
+        );
+
+    /*
+     * Hemos llegado a una hoja.
+     */
+    if (
+        validChildren.length === 0
+    ) {
+        lines.push({
+            id:
+                createTrainingLineId(
+                    currentPath,
+                ),
+
+            nodeIds:
+                currentPath,
+        });
+
+        return;
+    }
+
+    for (
+        const childId
+        of validChildren
+    ) {
+        collectLinesFromNode(
+            nodes,
+            childId,
+            currentPath,
+            lines,
+        );
+    }
 }
 
 /*
- * Elige qué variante jugará Chessktop.
+ * Genera las líneas que forman parte
+ * de un entrenamiento.
  */
-export function chooseOpponentResponse(
-    nodeIds: string[],
-    order:
-        | "random"
-        | "sequential",
-): string | null {
+export function generateTrainingLines(
+    nodes: TrainingNodesMap,
+    training: Training,
+): TrainingLine[] {
+    const root =
+        nodes.root;
+
+    if (!root) {
+        return [];
+    }
+
+    /*
+     * Línea principal:
+     * seguimos siempre children[0].
+     */
     if (
-        nodeIds.length === 0
+        training.mode ===
+        "main-line"
     ) {
-        return null;
+        const nodeIds: string[] = [
+            "root",
+        ];
+
+        let currentNode =
+            root;
+
+        while (
+            currentNode.children.length >
+            0
+        ) {
+            const nextNodeId =
+                currentNode.children[0];
+
+            const nextNode =
+                nodes[nextNodeId];
+
+            if (!nextNode) {
+                break;
+            }
+
+            nodeIds.push(
+                nextNodeId,
+            );
+
+            currentNode =
+                nextNode;
+        }
+
+        return [
+            {
+                id:
+                    createTrainingLineId(
+                        nodeIds,
+                    ),
+
+                nodeIds,
+            },
+        ];
     }
 
-    if (order === "sequential") {
-        return nodeIds[0];
-    }
+    /*
+     * selected-lines lo implementaremos
+     * cuando tengamos el selector visual
+     * de ramas.
+     *
+     * De momento se comporta como
+     * all-lines.
+     */
+    const lines:
+        TrainingLine[] = [];
 
-    const index =
-        Math.floor(
-            Math.random() *
-            nodeIds.length,
+    collectLinesFromNode(
+        nodes,
+        "root",
+        [],
+        lines,
+    );
+
+    /*
+     * El orden aleatorio afecta únicamente
+     * al orden en que practicamos las líneas,
+     * nunca a su contenido ni a su ID.
+     */
+    if (
+        training.order ===
+        "random"
+    ) {
+        return shuffleTrainingLines(
+            lines,
         );
+    }
 
-    return nodeIds[index];
+    return lines;
+}
+
+function shuffleTrainingLines(
+    lines: TrainingLine[],
+): TrainingLine[] {
+    const shuffled = [
+        ...lines,
+    ];
+
+    /*
+     * Fisher-Yates.
+     */
+    for (
+        let index =
+            shuffled.length - 1;
+        index > 0;
+        index -= 1
+    ) {
+        const randomIndex =
+            Math.floor(
+                Math.random() *
+                (index + 1),
+            );
+
+        [
+            shuffled[index],
+            shuffled[randomIndex],
+        ] = [
+                shuffled[randomIndex],
+                shuffled[index],
+            ];
+    }
+
+    return shuffled;
 }

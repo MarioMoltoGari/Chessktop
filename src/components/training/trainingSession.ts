@@ -5,12 +5,18 @@ import type {
 export function createTrainingSession(
     trainingId: string,
     startNodeId = "root",
+    totalLines = 1,
+    currentLineIndex = 0,
 ): TrainingSession {
     return {
         trainingId,
 
         currentNodeId:
             startNodeId,
+
+        currentLineIndex,
+        totalLines,
+        completedLineIds: [],
 
         startedAt:
             new Date().toISOString(),

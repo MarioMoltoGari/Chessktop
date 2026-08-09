@@ -1423,6 +1423,9 @@ function App() {
               selectedTraining.studyId
               ]
             }
+            onAddNote={
+              openNote
+            }
           />
         ) : (
           <>

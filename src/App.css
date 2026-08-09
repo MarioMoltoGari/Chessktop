@@ -2041,6 +2041,96 @@ textarea,
   font-weight: 700;
 }
 
+/*********************************/
+/* Estilos del training feedback */
+/*********************************/
+
+.training-feedback-message {
+  font-weight: 650;
+}
+
+.training-feedback-explanation,
+.training-feedback-note-suggestion {
+  margin-top: 10px;
+  padding-top: 10px;
+
+  border-top:
+    1px solid rgba(0, 0, 0, 0.08);
+}
+
+.training-feedback-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  text-align: left;
+}
+
+.training-feedback-explanation strong {
+  font-size: 0.76rem;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  opacity: 0.75;
+}
+
+.training-feedback-explanation span {
+  font-size: 0.86rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.training-feedback-note-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  text-align: left;
+}
+
+.training-feedback-note-suggestion>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.training-feedback-note-suggestion strong {
+  font-size: 0.84rem;
+}
+
+.training-feedback-note-suggestion span {
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+
+  opacity: 0.82;
+}
+
+.training-feedback-note-suggestion button {
+  flex-shrink: 0;
+
+  padding: 7px 11px;
+
+  border: 1px solid #667d62;
+  border-radius: 6px;
+
+  background: #ffffff;
+  color: #53684f;
+
+  font-size: 0.8rem;
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+.training-feedback-note-suggestion button:hover {
+  background: #667d62;
+  color: #ffffff;
+}
+
 /*****************************/
 /* Estilos de error boundary */
 /*****************************/

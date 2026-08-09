@@ -91,8 +91,22 @@ export type TrainingSession = {
 
     startedAt: string;
 
+    currentLineIndex: number;
+    totalLines: number;
+
     correctMoves: number;
     incorrectMoves: number;
 
     completed: boolean;
+    completedLineIds: string[];
+};
+
+export type TrainingLine = {
+    id: string;
+
+    /*
+     * Camino completo desde root
+     * hasta el final de la rama.
+     */
+    nodeIds: string[];
 };
