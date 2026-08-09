@@ -43,6 +43,9 @@ type TrainingWorkspaceProps = {
     onAddNote: (
         nodeId: string,
     ) => void;
+    onSessionCompleted: (
+        session: TrainingSession,
+    ) => void;
     onClose: () => void;
 };
 
@@ -52,20 +55,24 @@ type TrainingFeedback =
         | "correct"
         | "incorrect"
         | "complete";
+
         message: string;
-        /*
-         * Nota existente en el estudio.
-         */
+
         explanation?: string;
-        /*
-         * Nodo para el que sugerimos
-         * crear una nota.
-         */
+
         suggestedNoteNodeId?: string;
+
+        solutionNodeId?: string;
+
+        solutionMove?: string;
     }
     | null;
 
-const OPPONENT_MOVE_DELAY_MS = 500;
+const OPPONENT_MOVE_DELAY_MS =
+    500;
+
+const SHOW_SOLUTION_AFTER_MISTAKES =
+    2;
 
 function getInitialNodeIdForLine(
     line: TrainingLine,
@@ -81,20 +88,12 @@ function getInitialNodeIdForLine(
         return "root";
     }
 
-    /*
-     * Si el usuario juega con blancas,
-     * comienza desde la posición inicial.
-     */
     if (
         training.side === "white"
     ) {
         return "root";
     }
 
-    /*
-     * Si juega con negras, Chessktop
-     * realizará la primera jugada blanca.
-     */
     const firstMoveId =
         line.nodeIds[1];
 
@@ -106,11 +105,56 @@ function getInitialNodeIdForLine(
     );
 }
 
+function formatTrainingDuration(
+    startedAt: string,
+    completedAt: string | null,
+): string {
+    if (!completedAt) {
+        return "—";
+    }
+
+    const started =
+        new Date(
+            startedAt,
+        ).getTime();
+
+    const completed =
+        new Date(
+            completedAt,
+        ).getTime();
+
+    const durationMs =
+        Math.max(
+            0,
+            completed - started,
+        );
+
+    const totalSeconds =
+        Math.floor(
+            durationMs / 1000,
+        );
+
+    const minutes =
+        Math.floor(
+            totalSeconds / 60,
+        );
+
+    const seconds =
+        totalSeconds % 60;
+
+    if (minutes === 0) {
+        return `${seconds} s`;
+    }
+
+    return `${minutes} min ${seconds} s`;
+}
+
 export default function TrainingWorkspace({
     training,
     studyName,
     studyContent,
     onAddNote,
+    onSessionCompleted,
     onClose,
 }: TrainingWorkspaceProps) {
     const nodes =
@@ -120,14 +164,6 @@ export default function TrainingWorkspace({
         nodes.root?.fen ??
         new Chess().fen();
 
-    /*
-     * Generamos todas las líneas que forman
-     * parte del entrenamiento.
-     *
-     * generateTrainingLines también decide
-     * su orden según la configuración
-     * secuencial o aleatoria.
-     */
     const trainingLines =
         useMemo(
             () =>
@@ -144,15 +180,6 @@ export default function TrainingWorkspace({
     const firstTrainingLine =
         trainingLines[0] ?? null;
 
-    /*
-     * Creamos la sesión apuntando ya al nodo
-     * desde el que deberá jugar el usuario.
-     *
-     * En entrenamientos con negras esto puede
-     * ser el nodo posterior a la primera
-     * jugada blanca, aunque visualmente
-     * mostremos root durante 500 ms.
-     */
     const [
         session,
         setSession,
@@ -180,13 +207,6 @@ export default function TrainingWorkspace({
         session.currentNodeId
         ] ?? nodes.root;
 
-    /*
-     * Estado puramente visual del tablero.
-     *
-     * Con negras mostramos primero root
-     * para que el usuario vea después la
-     * primera jugada blanca.
-     */
     const [
         position,
         setPosition,
@@ -218,11 +238,6 @@ export default function TrainingWorkspace({
     ] =
         useState(false);
 
-    /*
-     * Mientras Chessktop realiza una
-     * jugada automática bloqueamos
-     * temporalmente el tablero.
-     */
     const [
         opponentThinking,
         setOpponentThinking,
@@ -236,9 +251,9 @@ export default function TrainingWorkspace({
             null,
         );
 
-    /*
-     * Posición entrenable actual.
-     */
+    const sessionReportedRef =
+        useRef(false);
+
     const trainingPosition =
         createTrainingPosition(
             nodes,
@@ -246,7 +261,12 @@ export default function TrainingWorkspace({
             training,
         );
 
+    const interactivePhase =
+        session.phase === "main" ||
+        session.phase === "review";
+
     const userTurn =
+        interactivePhase &&
         !session.completed &&
         !opponentThinking &&
         trainingPosition !== null;
@@ -267,14 +287,6 @@ export default function TrainingWorkspace({
             null;
     }
 
-    /*
-     * Primera jugada automática al abrir
-     * un entrenamiento con negras.
-     *
-     * La sesión ya está preparada en el
-     * nodo correspondiente; aquí solo
-     * retrasamos su representación visual.
-     */
     useEffect(() => {
         if (
             training.side !== "black" ||
@@ -324,10 +336,6 @@ export default function TrainingWorkspace({
         training,
     ]);
 
-    /*
-     * Devuelve el siguiente nodo dentro
-     * de una línea concreta.
-     */
     function getNextNodeInLine(
         lineIndex: number,
         currentNodeId: string,
@@ -359,11 +367,30 @@ export default function TrainingWorkspace({
         );
     }
 
-    /*
-     * Busca una línea pendiente compatible
-     * con una alternativa válida jugada
-     * por el usuario.
-     */
+    function getExpectedNodeId():
+        string | null {
+        if (
+            session.phase === "review"
+        ) {
+            return (
+                trainingPosition
+                    ?.validMoveNodeIds[0] ??
+                null
+            );
+        }
+
+        if (
+            session.phase === "main"
+        ) {
+            return getNextNodeInLine(
+                session.currentLineIndex,
+                session.currentNodeId,
+            );
+        }
+
+        return null;
+    }
+
     function findCompatiblePendingLineIndex(
         currentNodeId: string,
         nextNodeId: string,
@@ -411,13 +438,6 @@ export default function TrainingWorkspace({
         return null;
     }
 
-    /*
-     * Inicia visual y lógicamente una línea.
-     *
-     * Es utilizado tanto al pasar a la
-     * siguiente línea como al reiniciar
-     * el entrenamiento.
-     */
     function startLine(
         line: TrainingLine,
         lineIndex: number,
@@ -443,6 +463,8 @@ export default function TrainingWorkspace({
             TrainingSession = {
             ...baseSession,
 
+            phase: "main",
+
             currentNodeId:
                 initialNodeId,
 
@@ -454,21 +476,10 @@ export default function TrainingWorkspace({
 
         clearOpponentTimeout();
 
-        /*
-         * Actualizamos inmediatamente
-         * el estado lógico de la sesión.
-         */
         setSession(
             nextSession,
         );
 
-        /*
-         * Con negras queremos ver:
-         *
-         * posición inicial
-         * → 500 ms
-         * → jugada blanca.
-         */
         if (
             training.side === "black" &&
             initialNodeId !== "root"
@@ -498,10 +509,6 @@ export default function TrainingWorkspace({
             return;
         }
 
-        /*
-         * Con blancas no existe una jugada
-         * automática inicial.
-         */
         setPosition(
             initialNode.fen,
         );
@@ -511,26 +518,272 @@ export default function TrainingWorkspace({
         );
     }
 
-    /*
-     * Procesa una jugada realizada
-     * por el usuario.
-     */
+    function showSolution(
+        nodeId: string,
+    ) {
+        const solutionNode =
+            nodes[nodeId];
+
+        if (!solutionNode) {
+            return;
+        }
+
+        const solutionMove =
+            solutionNode.san?.trim() ||
+            (
+                solutionNode.from &&
+                    solutionNode.to
+                    ? `${solutionNode.from} → ${solutionNode.to}`
+                    : "Movimiento correcto"
+            );
+
+        setFeedback(
+            (previousFeedback) => {
+                if (
+                    !previousFeedback ||
+                    previousFeedback.type !==
+                    "incorrect"
+                ) {
+                    return previousFeedback;
+                }
+
+                return {
+                    ...previousFeedback,
+
+                    solutionMove,
+                };
+            },
+        );
+    }
+
+    function prepareReview(
+        currentSession:
+            TrainingSession,
+    ) {
+        const reviewNodeIds = [
+            ...currentSession
+                .problematicNodeIds,
+        ];
+
+        if (
+            reviewNodeIds.length === 0
+        ) {
+            completeSession(
+                currentSession,
+            );
+
+            return;
+        }
+
+        clearOpponentTimeout();
+
+        setOpponentThinking(
+            false,
+        );
+
+        setFeedback(
+            null,
+        );
+
+        setSession({
+            ...currentSession,
+
+            phase:
+                "review-intro",
+
+            reviewNodeIds,
+
+            currentReviewIndex: 0,
+
+            completed: false,
+        });
+    }
+
+    function startReview() {
+        const firstReviewNodeId =
+            session.reviewNodeIds[0];
+
+        if (!firstReviewNodeId) {
+            completeSession(
+                session,
+            );
+
+            return;
+        }
+
+        const reviewNode =
+            nodes[
+            firstReviewNodeId
+            ];
+
+        if (!reviewNode) {
+            completeSession(
+                session,
+            );
+
+            return;
+        }
+
+        setSession({
+            ...session,
+
+            phase: "review",
+
+            currentNodeId:
+                firstReviewNodeId,
+
+            currentReviewIndex: 0,
+
+            completed: false,
+        });
+
+        setPosition(
+            reviewNode.fen,
+        );
+
+        setFeedback(
+            null,
+        );
+
+        setOpponentThinking(
+            false,
+        );
+    }
+
+    function startNextReviewPosition(
+        currentSession:
+            TrainingSession,
+    ) {
+        const nextReviewIndex =
+            currentSession
+                .currentReviewIndex + 1;
+
+        const nextReviewNodeId =
+            currentSession
+                .reviewNodeIds[
+            nextReviewIndex
+            ];
+
+        if (!nextReviewNodeId) {
+            completeSession(
+                currentSession,
+            );
+
+            return;
+        }
+
+        const nextReviewNode =
+            nodes[
+            nextReviewNodeId
+            ];
+
+        if (!nextReviewNode) {
+            completeSession(
+                currentSession,
+            );
+
+            return;
+        }
+
+        setSession({
+            ...currentSession,
+
+            phase: "review",
+
+            currentReviewIndex:
+                nextReviewIndex,
+
+            currentNodeId:
+                nextReviewNodeId,
+        });
+
+        setPosition(
+            nextReviewNode.fen,
+        );
+
+        setFeedback({
+            type: "correct",
+
+            message:
+                "Posición superada. Siguiente repaso.",
+        });
+
+        setOpponentThinking(
+            false,
+        );
+    }
+
+    function completeReviewPosition(
+        sessionAfterUserMove:
+            TrainingSession,
+        matchedNodeId: string,
+    ) {
+        const matchedNode =
+            nodes[
+            matchedNodeId
+            ];
+
+        if (!matchedNode) {
+            startNextReviewPosition(
+                sessionAfterUserMove,
+            );
+
+            return;
+        }
+
+        setSession(
+            sessionAfterUserMove,
+        );
+
+        setPosition(
+            matchedNode.fen,
+        );
+
+        setFeedback({
+            type: "correct",
+
+            message:
+                "Movimiento correcto.",
+        });
+
+        setOpponentThinking(
+            true,
+        );
+
+        clearOpponentTimeout();
+
+        opponentTimeoutRef.current =
+            window.setTimeout(() => {
+                opponentTimeoutRef.current =
+                    null;
+
+                setOpponentThinking(
+                    false,
+                );
+
+                startNextReviewPosition(
+                    sessionAfterUserMove,
+                );
+            }, OPPONENT_MOVE_DELAY_MS);
+    }
+
     function makeTrainingMove(
         sourceSquare: string,
         targetSquare: string,
     ): boolean {
         if (
             session.completed ||
-            !trainingPosition
+            !trainingPosition ||
+            !interactivePhase
         ) {
             return false;
         }
 
+        const positionNodeId =
+            session.currentNodeId;
+
         const expectedNodeId =
-            getNextNodeInLine(
-                session.currentLineIndex,
-                session.currentNodeId,
-            );
+            getExpectedNodeId();
 
         const expectedNode =
             expectedNodeId
@@ -539,10 +792,6 @@ export default function TrainingWorkspace({
                 ]
                 : null;
 
-        /*
-         * Primero comprobamos que sea
-         * legal según chess.js.
-         */
         const game =
             new Chess(position);
 
@@ -553,18 +802,16 @@ export default function TrainingWorkspace({
                 game.move({
                     from:
                         sourceSquare,
+
                     to:
                         targetSquare,
+
                     promotion: "q",
                 });
         } catch {
             return false;
         }
 
-        /*
-         * Después comprobamos si forma
-         * parte del repertorio.
-         */
         const result =
             validateTrainingMove(
                 nodes,
@@ -575,37 +822,56 @@ export default function TrainingWorkspace({
             );
 
         if (!result.correct) {
+            const sessionAfterIncorrect =
+                registerIncorrectMove(
+                    session,
+                    positionNodeId,
+                );
+
             setSession(
-                (
-                    previousSession,
-                ) =>
-                    registerIncorrectMove(
-                        previousSession,
-                    ),
+                sessionAfterIncorrect,
             );
 
-            const explanation =
-                expectedNode?.note?.trim();
+            const mistakesInPosition =
+                sessionAfterIncorrect
+                    .positionMistakes[
+                positionNodeId
+                ] ?? 0;
 
-            /*
-             * Si existe una nota, la mostramos.
-             *
-             * Si no existe y todavía no hemos
-             * sugerido crear notas durante esta
-             * sesión, mostramos la sugerencia.
-             */
+            const explanation =
+                expectedNode
+                    ?.note
+                    ?.trim();
+
+            const canShowSolution =
+                Boolean(
+                    expectedNode,
+                ) &&
+                mistakesInPosition >=
+                SHOW_SOLUTION_AFTER_MISTAKES;
+
             if (explanation) {
                 setFeedback({
                     type: "incorrect",
 
                     message:
-                        "Ese movimiento no está en tu repertorio.",
+                        mistakesInPosition >=
+                            SHOW_SOLUTION_AFTER_MISTAKES
+                            ? "Segundo intento incorrecto."
+                            : "Ese movimiento no está en tu repertorio.",
 
                     explanation,
+
+                    solutionNodeId:
+                        canShowSolution
+                            ? expectedNodeId ??
+                            undefined
+                            : undefined,
                 });
             } else if (
                 expectedNode &&
-                !noteSuggestionShown
+                !noteSuggestionShown &&
+                mistakesInPosition === 1
             ) {
                 setFeedback({
                     type: "incorrect",
@@ -625,7 +891,16 @@ export default function TrainingWorkspace({
                     type: "incorrect",
 
                     message:
-                        "Ese movimiento no está en tu repertorio.",
+                        mistakesInPosition >=
+                            SHOW_SOLUTION_AFTER_MISTAKES
+                            ? "Segundo intento incorrecto."
+                            : "Ese movimiento no está en tu repertorio.",
+
+                    solutionNodeId:
+                        canShowSolution
+                            ? expectedNodeId ??
+                            undefined
+                            : undefined,
                 });
             }
 
@@ -641,21 +916,33 @@ export default function TrainingWorkspace({
             return false;
         }
 
+        if (
+            session.phase === "review"
+        ) {
+            const sessionAfterUserMove =
+                registerCorrectMove(
+                    session,
+                    result.matchedNodeId,
+                );
+
+            completeReviewPosition(
+                sessionAfterUserMove,
+                result.matchedNodeId,
+            );
+
+            return true;
+        }
+
         let targetLineIndex =
             session.currentLineIndex;
 
-        /*
-         * Una alternativa diferente puede
-         * ser igualmente correcta si existe
-         * en otra línea pendiente.
-         */
         if (
             result.matchedNodeId !==
             expectedNodeId
         ) {
             const compatibleLineIndex =
                 findCompatiblePendingLineIndex(
-                    session.currentNodeId,
+                    positionNodeId,
                     result.matchedNodeId,
                 );
 
@@ -676,11 +963,13 @@ export default function TrainingWorkspace({
                     currentLineIndex:
                         targetLineIndex,
                 },
+
                 result.matchedNodeId,
             );
 
         setFeedback({
             type: "correct",
+
             message:
                 "Movimiento correcto.",
         });
@@ -693,13 +982,10 @@ export default function TrainingWorkspace({
         return true;
     }
 
-    /*
-     * Realiza la respuesta automática
-     * del rival dentro de la línea actual.
-     */
     function playOpponentMove(
         sessionAfterUserMove:
             TrainingSession,
+
         userMoveNodeId: string,
     ) {
         const userMoveNode =
@@ -708,7 +994,7 @@ export default function TrainingWorkspace({
             ];
 
         if (!userMoveNode) {
-            finishSession(
+            finishMainLine(
                 sessionAfterUserMove,
             );
 
@@ -723,10 +1009,6 @@ export default function TrainingWorkspace({
                 userMoveNodeId,
             );
 
-        /*
-         * La línea termina con la jugada
-         * realizada por el usuario.
-         */
         if (!opponentNodeId) {
             setPosition(
                 userMoveNode.fen,
@@ -736,7 +1018,7 @@ export default function TrainingWorkspace({
                 sessionAfterUserMove,
             );
 
-            finishSession(
+            finishMainLine(
                 sessionAfterUserMove,
             );
 
@@ -749,29 +1031,17 @@ export default function TrainingWorkspace({
             ];
 
         if (!opponentNode) {
-            finishSession(
+            finishMainLine(
                 sessionAfterUserMove,
             );
 
             return;
         }
 
-        /*
-         * Actualizamos inmediatamente
-         * la sesión con la jugada correcta
-         * del usuario.
-         *
-         * Así estadísticas y lógica no
-         * dependen de los 500 ms visuales.
-         */
         setSession(
             sessionAfterUserMove,
         );
 
-        /*
-         * Mostramos primero la posición
-         * después de la jugada del usuario.
-         */
         setPosition(
             userMoveNode.fen,
         );
@@ -792,10 +1062,6 @@ export default function TrainingWorkspace({
                         opponentNodeId,
                 };
 
-                /*
-                 * Ahora sí aparece visualmente
-                 * la respuesta del rival.
-                 */
                 setPosition(
                     opponentNode.fen,
                 );
@@ -817,7 +1083,7 @@ export default function TrainingWorkspace({
                 if (
                     !nextTrainingPosition
                 ) {
-                    finishSession(
+                    finishMainLine(
                         sessionAfterOpponent,
                     );
 
@@ -830,10 +1096,6 @@ export default function TrainingWorkspace({
             }, OPPONENT_MOVE_DELAY_MS);
     }
 
-    /*
-     * Busca la primera línea de la sesión
-     * que todavía no haya sido completada.
-     */
     function startNextLine(
         currentSession:
             TrainingSession,
@@ -871,6 +1133,7 @@ export default function TrainingWorkspace({
 
         setFeedback({
             type: "correct",
+
             message:
                 "Línea completada. Siguiente línea.",
         });
@@ -878,13 +1141,7 @@ export default function TrainingWorkspace({
         return true;
     }
 
-    /*
-     * Finaliza la línea actual.
-     *
-     * La marca como cubierta y busca
-     * automáticamente otra pendiente.
-     */
-    function finishSession(
+    function finishMainLine(
         currentSession:
             TrainingSession,
     ) {
@@ -924,26 +1181,58 @@ export default function TrainingWorkspace({
             return;
         }
 
+        prepareReview(
+            sessionWithCompletedLine,
+        );
+    }
+
+    function completeSession(
+        currentSession:
+            TrainingSession,
+    ) {
+        clearOpponentTimeout();
+
+        setOpponentThinking(
+            false,
+        );
+
         const completedSession =
             completeTrainingSession(
-                sessionWithCompletedLine,
+                currentSession,
             );
 
         setSession(
             completedSession,
         );
 
+        /*
+         * Solo registramos esta sesión
+         * una vez aunque React vuelva
+         * a renderizar el componente.
+         */
+        if (
+            !sessionReportedRef.current
+        ) {
+            sessionReportedRef.current =
+                true;
+
+            onSessionCompleted(
+                completedSession,
+            );
+        }
+
         setFeedback({
             type: "complete",
+
             message:
                 "Entrenamiento completado.",
         });
     }
 
-    /*
-     * Reinicia completamente el entrenamiento.
-     */
     function restartTraining() {
+        sessionReportedRef.current =
+            false;
+
         const firstLine =
             trainingLines[0];
 
@@ -991,18 +1280,8 @@ export default function TrainingWorkspace({
     const completedLines =
         session.completedLineIds.length;
 
-    /*
-     * Información de depuración.
-     *
-     * La mantendremos mientras desarrollamos
-     * el entrenador y la eliminaremos antes
-     * de producción.
-     */
     const expectedNodeId =
-        getNextNodeInLine(
-            session.currentLineIndex,
-            session.currentNodeId,
-        );
+        getExpectedNodeId();
 
     const expectedMove =
         expectedNodeId
@@ -1011,12 +1290,307 @@ export default function TrainingWorkspace({
             ]?.san ?? "—"
             : "—";
 
+    const currentPositionMistakes =
+        session.positionMistakes[
+        session.currentNodeId
+        ] ?? 0;
+
+    const reviewProgress =
+        session.phase === "review"
+            ? session.currentReviewIndex + 1
+            : 0;
+
+    const duration =
+        formatTrainingDuration(
+            session.startedAt,
+            session.completedAt,
+        );
+
+    const reviewedPositions =
+        session.reviewNodeIds.length;
+
+    if (
+        session.phase === "completed"
+    ) {
+        return (
+            <section className="training-workspace">
+                <header className="training-workspace-header">
+                    <div>
+                        <span className="training-workspace-label">
+                            Entrenamiento
+                        </span>
+
+                        <h2>
+                            {training.name}
+                        </h2>
+
+                        <p>
+                            {studyName}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                    >
+                        Volver al estudio
+                    </button>
+                </header>
+
+                <div className="training-results">
+                    <div className="training-results-header">
+                        <span className="training-results-label">
+                            Sesión terminada
+                        </span>
+
+                        <h3>
+                            Entrenamiento completado
+                        </h3>
+
+                        <p>
+                            Has terminado todas las líneas
+                            y los repasos pendientes de
+                            esta sesión.
+                        </p>
+                    </div>
+
+                    <div
+                        className="training-results-accuracy"
+                        style={{
+                            background: `conic-gradient(
+            #667d62 ${accuracy}%,
+            #e5e8e2 ${accuracy}% 100%
+        )`,
+                        }}
+                    >
+                        <div className="training-results-accuracy-inner">
+                            <strong>
+                                {accuracy}%
+                            </strong>
+
+                            <span>
+                                Precisión
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="training-results-grid">
+                        <div className="training-result-card">
+                            <span>
+                                Aciertos
+                            </span>
+
+                            <strong>
+                                {
+                                    session.correctMoves
+                                }
+                            </strong>
+                        </div>
+
+                        <div className="training-result-card">
+                            <span>
+                                Errores
+                            </span>
+
+                            <strong>
+                                {
+                                    session.incorrectMoves
+                                }
+                            </strong>
+                        </div>
+
+                        <div className="training-result-card">
+                            <span>
+                                Líneas
+                            </span>
+
+                            <strong>
+                                {
+                                    session
+                                        .completedLineIds
+                                        .length
+                                }
+                                {" / "}
+                                {
+                                    session.totalLines
+                                }
+                            </strong>
+                        </div>
+
+                        <div className="training-result-card">
+                            <span>
+                                Posiciones problemáticas
+                            </span>
+
+                            <strong>
+                                {
+                                    session
+                                        .problematicNodeIds
+                                        .length
+                                }
+                            </strong>
+                        </div>
+
+                        <div className="training-result-card">
+                            <span>
+                                Posiciones repasadas
+                            </span>
+
+                            <strong>
+                                {
+                                    reviewedPositions
+                                }
+                            </strong>
+                        </div>
+
+                        <div className="training-result-card">
+                            <span>
+                                Duración
+                            </span>
+
+                            <strong>
+                                {duration}
+                            </strong>
+                        </div>
+                    </div>
+
+                    {session.problematicNodeIds.length ===
+                        0 ? (
+                        <div className="training-results-message success">
+                            No has tenido posiciones
+                            problemáticas en esta sesión.
+                        </div>
+                    ) : (
+                        <div className="training-results-message">
+                            Has tenido dificultades en{" "}
+                            <strong>
+                                {
+                                    session
+                                        .problematicNodeIds
+                                        .length
+                                }
+                            </strong>{" "}
+                            {session.problematicNodeIds.length ===
+                                1
+                                ? "posición"
+                                : "posiciones"}
+                            . Chessktop las ha incluido
+                            en el repaso final.
+                        </div>
+                    )}
+
+                    <div className="training-results-actions">
+                        <button
+                            type="button"
+                            className="training-results-restart"
+                            onClick={
+                                restartTraining
+                            }
+                        >
+                            Repetir entrenamiento
+                        </button>
+
+                        <button
+                            type="button"
+                            className="training-results-close"
+                            onClick={
+                                onClose
+                            }
+                        >
+                            Volver al estudio
+                        </button>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    if (
+        session.phase ===
+        "review-intro"
+    ) {
+        return (
+            <section className="training-workspace">
+                <header className="training-workspace-header">
+                    <div>
+                        <span className="training-workspace-label">
+                            Entrenamiento
+                        </span>
+
+                        <h2>
+                            {training.name}
+                        </h2>
+
+                        <p>
+                            {studyName}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={
+                            onClose
+                        }
+                    >
+                        Volver al estudio
+                    </button>
+                </header>
+
+                <div className="training-review-intro">
+                    <span className="training-review-intro-label">
+                        Repaso
+                    </span>
+
+                    <h3>
+                        Vamos a entrenar las posiciones
+                        que has fallado antes
+                    </h3>
+
+                    <p>
+                        Has completado todas las líneas
+                        del entrenamiento. Ahora vamos a
+                        volver directamente a las posiciones
+                        que te han dado más problemas.
+                    </p>
+
+                    <div className="training-review-count">
+                        <strong>
+                            {
+                                session
+                                    .reviewNodeIds
+                                    .length
+                            }
+                        </strong>
+
+                        <span>
+                            {session.reviewNodeIds.length === 1
+                                ? "posición por repasar"
+                                : "posiciones por repasar"}
+                        </span>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="training-review-start-button"
+                        onClick={
+                            startReview
+                        }
+                    >
+                        Empezar repaso
+                    </button>
+                </div>
+            </section>
+        );
+    }
+
     return (
         <section className="training-workspace">
             <header className="training-workspace-header">
                 <div>
                     <span className="training-workspace-label">
-                        Entrenamiento
+                        {session.phase === "review"
+                            ? "Repaso"
+                            : "Entrenamiento"}
                     </span>
 
                     <h2>
@@ -1087,6 +1661,49 @@ export default function TrainingWorkspace({
                             </button>
                         </div>
                     )}
+
+                    {feedback.solutionNodeId &&
+                        !feedback.solutionMove && (
+                            <div className="training-feedback-solution">
+                                <span>
+                                    ¿Necesitas ayuda?
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        showSolution(
+                                            feedback
+                                                .solutionNodeId!,
+                                        )
+                                    }
+                                >
+                                    Mostrar solución
+                                </button>
+                            </div>
+                        )}
+
+                    {feedback.solutionMove && (
+                        <div className="training-feedback-solution-revealed">
+                            <strong>
+                                Solución
+                            </strong>
+
+                            <span>
+                                La jugada era{" "}
+                                <b>
+                                    {
+                                        feedback.solutionMove
+                                    }
+                                </b>
+                            </span>
+
+                            <small>
+                                Ahora realiza tú el movimiento
+                                para continuar.
+                            </small>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1140,23 +1757,13 @@ export default function TrainingWorkspace({
                             }}
                         />
                     </div>
-
-                    {session.completed && (
-                        <button
-                            type="button"
-                            className="training-restart-button"
-                            onClick={
-                                restartTraining
-                            }
-                        >
-                            Repetir entrenamiento
-                        </button>
-                    )}
                 </div>
 
                 <aside className="training-session-panel">
                     <h3>
-                        Sesión
+                        {session.phase === "review"
+                            ? "Repaso"
+                            : "Sesión"}
                     </h3>
 
                     <div className="training-session-stat">
@@ -1169,36 +1776,58 @@ export default function TrainingWorkspace({
                         </strong>
                     </div>
 
-                    <div className="training-session-stat">
-                        <span>
-                            Progreso
-                        </span>
+                    {session.phase === "main" && (
+                        <>
+                            <div className="training-session-stat">
+                                <span>
+                                    Progreso
+                                </span>
 
-                        <strong>
-                            {completedLines}
-                            {" / "}
-                            {
-                                trainingLines.length
-                            }
-                        </strong>
-                    </div>
+                                <strong>
+                                    {completedLines}
+                                    {" / "}
+                                    {
+                                        trainingLines.length
+                                    }
+                                </strong>
+                            </div>
 
-                    <div className="training-session-stat">
-                        <span>
-                            Línea actual
-                        </span>
+                            <div className="training-session-stat">
+                                <span>
+                                    Línea actual
+                                </span>
 
-                        <strong>
-                            {
-                                session.currentLineIndex +
-                                1
-                            }
-                            {" / "}
-                            {
-                                trainingLines.length
-                            }
-                        </strong>
-                    </div>
+                                <strong>
+                                    {
+                                        session.currentLineIndex +
+                                        1
+                                    }
+                                    {" / "}
+                                    {
+                                        trainingLines.length
+                                    }
+                                </strong>
+                            </div>
+                        </>
+                    )}
+
+                    {session.phase === "review" && (
+                        <div className="training-session-stat">
+                            <span>
+                                Posición
+                            </span>
+
+                            <strong>
+                                {reviewProgress}
+                                {" / "}
+                                {
+                                    session
+                                        .reviewNodeIds
+                                        .length
+                                }
+                            </strong>
+                        </div>
+                    )}
 
                     <div className="training-session-stat">
                         <span>
@@ -1226,6 +1855,32 @@ export default function TrainingWorkspace({
 
                     <div className="training-session-stat">
                         <span>
+                            Errores aquí
+                        </span>
+
+                        <strong>
+                            {
+                                currentPositionMistakes
+                            }
+                        </strong>
+                    </div>
+
+                    <div className="training-session-stat">
+                        <span>
+                            Posiciones problemáticas
+                        </span>
+
+                        <strong>
+                            {
+                                session
+                                    .problematicNodeIds
+                                    .length
+                            }
+                        </strong>
+                    </div>
+
+                    <div className="training-session-stat">
+                        <span>
                             Precisión
                         </span>
 
@@ -1235,13 +1890,13 @@ export default function TrainingWorkspace({
                     </div>
 
                     <div className="training-session-status">
-                        {session.completed
-                            ? "Completado"
-                            : opponentThinking
-                                ? "Juega Chessktop..."
-                                : userTurn
-                                    ? "Tu turno"
-                                    : "Preparando posición"}
+                        {opponentThinking
+                            ? session.phase === "review"
+                                ? "Preparando siguiente posición..."
+                                : "Juega Chessktop..."
+                            : userTurn
+                                ? "Tu turno"
+                                : "Preparando posición"}
                     </div>
                 </aside>
             </div>

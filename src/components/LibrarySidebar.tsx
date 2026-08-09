@@ -8,13 +8,23 @@ import ContextMenu, {
     type ContextMenuItem,
 } from "./library/ContextMenu";
 import MoveLibraryItemDialog from "./library/MoveLibraryItemDialog";
-import type { TrainingMode, TrainingOrder, TrainingSide, TrainingsMap, Training } from "./training/types";
+import type {
+    Training,
+    TrainingMode,
+    TrainingOrder,
+    TrainingPerformancesMap,
+    TrainingSide,
+    TrainingsMap,
+} from "./training/types";
+import {
+    getHistoricalAccuracy,
+} from "./training/trainingPerformance";
 import CreateTrainingDialog from "./training/CreateTrainingDialog";
 
 type LibrarySidebarProps = {
     library: LibraryState;
     selectedStudyId: string | null;
-
+    trainingPerformances: TrainingPerformancesMap;
     onLibraryChange: (library: LibraryState) => void;
     onStudySelect: (studyId: string | null) => void;
     onExportLibrary: () => void;
@@ -50,6 +60,7 @@ type FolderNodeProps = {
     selectedStudyId: string | null;
     depth: number;
     deleteMode: boolean;
+    trainingPerformances: TrainingPerformancesMap;
 
     onToggleFolder: (folderId: string) => void;
     onSelectStudy: (studyId: string) => void;
@@ -88,7 +99,7 @@ type LibraryContextMenuState = {
 type StudyNodeProps = {
     study: ChessStudy;
     trainings: Training[];
-
+    trainingPerformances: TrainingPerformancesMap;
     selectedStudyId: string | null;
 
     depth: number;
@@ -112,9 +123,68 @@ type StudyNodeProps = {
     ) => void;
 };
 
+function formatLastTrainingDate(
+    value: string | null,
+): string {
+    if (!value) {
+        return "";
+    }
+
+    const date =
+        new Date(value);
+
+    if (
+        Number.isNaN(
+            date.getTime(),
+        )
+    ) {
+        return "";
+    }
+
+    const today =
+        new Date();
+
+    const todayKey =
+        today.toDateString();
+
+    const dateKey =
+        date.toDateString();
+
+    if (
+        dateKey ===
+        todayKey
+    ) {
+        return "Hoy";
+    }
+
+    const yesterday =
+        new Date();
+
+    yesterday.setDate(
+        yesterday.getDate() - 1,
+    );
+
+    if (
+        dateKey ===
+        yesterday.toDateString()
+    ) {
+        return "Ayer";
+    }
+
+    return date.toLocaleDateString(
+        "es-ES",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        },
+    );
+}
+
 function StudyNode({
     study,
     trainings,
+    trainingPerformances,
     selectedStudyId,
     depth,
     deleteMode,
@@ -172,46 +242,90 @@ function StudyNode({
 
             {!deleteMode &&
                 trainings.map(
-                    (training) => (
-                        <button
-                            key={training.id}
-                            type="button"
-                            className="library-training-row"
-                            style={{
-                                paddingLeft:
-                                    `${depth * 16 + 58
-                                    }px`,
-                            }}
-                            onClick={() =>
-                                onOpenTraining(
-                                    training.id,
-                                )
-                            }
-                            onContextMenu={(event) =>
-                                onOpenContextMenu(
-                                    event,
-                                    {
-                                        type: "training",
-                                        id: training.id,
-                                    },
-                                )
-                            }
-                            title={
-                                training.name
-                            }
-                        >
-                            <span
-                                className="library-training-icon"
-                                aria-hidden="true"
-                            >
-                                🏋
-                            </span>
+                    (training) => {
+                        const performance =
+                            trainingPerformances[
+                            training.id
+                            ];
 
-                            <span>
-                                {training.name}
-                            </span>
-                        </button>
-                    ),
+                        const accuracy =
+                            getHistoricalAccuracy(
+                                performance,
+                            );
+
+                        const lastTraining =
+                            formatLastTrainingDate(
+                                performance
+                                    ?.lastTrainedAt ??
+                                null,
+                            );
+
+                        return (
+                            <button
+                                key={
+                                    training.id
+                                }
+                                type="button"
+                                className="library-training-row"
+                                style={{
+                                    paddingLeft:
+                                        `${depth * 16 + 58}px`,
+                                }}
+                                onClick={() =>
+                                    onOpenTraining(
+                                        training.id,
+                                    )
+                                }
+                                onContextMenu={(
+                                    event,
+                                ) =>
+                                    onOpenContextMenu(
+                                        event,
+                                        {
+                                            type:
+                                                "training",
+                                            id:
+                                                training.id,
+                                        },
+                                    )
+                                }
+                                title={
+                                    training.name
+                                }
+                            >
+                                <span
+                                    className="library-training-icon"
+                                    aria-hidden="true"
+                                >
+                                    🏋
+                                </span>
+
+                                <span className="library-training-content">
+                                    <span className="library-training-name">
+                                        {
+                                            training.name
+                                        }
+                                    </span>
+
+                                    <span className="library-training-meta">
+                                        {performance
+                                            ? `${performance.totalSessions} ${performance.totalSessions ===
+                                                1
+                                                ? "sesión"
+                                                : "sesiones"
+                                            } · ${accuracy ??
+                                            "—"
+                                            }%`
+                                            : "Todavía no entrenado"}
+
+                                        {performance &&
+                                            lastTraining &&
+                                            ` · ${lastTraining}`}
+                                    </span>
+                                </span>
+                            </button>
+                        );
+                    },
                 )}
         </div>
     );
@@ -225,6 +339,7 @@ function FolderNode({
     selectedStudyId,
     depth,
     deleteMode,
+    trainingPerformances,
     onToggleFolder,
     onSelectStudy,
     onCreateFolder,
@@ -234,6 +349,7 @@ function FolderNode({
     onOpenContextMenu,
     onOpenTraining,
 }: FolderNodeProps) {
+
     const childFolders = folders.filter(
         (candidate) => candidate.parentId === folder.id,
     );
@@ -359,6 +475,7 @@ function FolderNode({
                             }
                             onOpenTraining={onOpenTraining}
                             trainings={trainings}
+                            trainingPerformances={trainingPerformances}
                         />
                     ))}
 
@@ -381,6 +498,9 @@ function FolderNode({
                                 }
                                 selectedStudyId={
                                     selectedStudyId
+                                }
+                                trainingPerformances={
+                                    trainingPerformances
                                 }
                                 depth={depth + 1}
                                 deleteMode={
@@ -426,6 +546,7 @@ function getDescendantFolderIds(
 export default function LibrarySidebar({
     library,
     trainings,
+    trainingPerformances,
     selectedStudyId,
     onLibraryChange,
     onStudySelect,
@@ -1241,6 +1362,9 @@ export default function LibrarySidebar({
                         key={folder.id}
                         folder={folder}
                         folders={library.folders}
+                        trainingPerformances={
+                            trainingPerformances
+                        }
                         studies={visibleStudies}
                         selectedStudyId={selectedStudyId}
                         depth={0}
@@ -1278,6 +1402,9 @@ export default function LibrarySidebar({
                             }
                             selectedStudyId={
                                 selectedStudyId
+                            }
+                            trainingPerformances={
+                                trainingPerformances
                             }
                             depth={0}
                             deleteMode={

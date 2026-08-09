@@ -1,7 +1,9 @@
 import type {
     StudyContentsMap,
 } from "../types";
+
 import type {
+    TrainingPerformancesMap,
     TrainingsMap,
 } from "../components/training/types";
 
@@ -44,4 +46,11 @@ export type ChessktopStorage = {
     selectedStudyId: string | null;
 
     trainings: TrainingsMap;
+
+    /*
+     * Rendimiento histórico acumulado
+     * de los entrenamientos.
+     */
+    trainingPerformances:
+    TrainingPerformancesMap;
 };

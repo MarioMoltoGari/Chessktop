@@ -11,6 +11,12 @@ export type TrainingOrder =
     | "random"
     | "sequential";
 
+export type TrainingSessionPhase =
+    | "main"
+    | "review-intro"
+    | "review"
+    | "completed";
+
 export type Training = {
     id: string;
 
@@ -41,7 +47,7 @@ export type Training = {
     selectedNodeIds: string[];
 
     /*
-     * Cómo recorrer las respuestas del rival.
+     * Cómo recorrer las líneas.
      */
     order: TrainingOrder;
 
@@ -82,7 +88,8 @@ export type TrainingMoveResult =
 /*
  * Estado temporal de una sesión.
  *
- * Esto NO necesita guardarse todavía.
+ * En el Paso 7 utilizaremos esta información
+ * como base para persistir el rendimiento.
  */
 export type TrainingSession = {
     trainingId: string;
@@ -91,6 +98,14 @@ export type TrainingSession = {
 
     startedAt: string;
 
+    /*
+     * Se establece cuando termina
+     * completamente la sesión.
+     */
+    completedAt: string | null;
+
+    phase: TrainingSessionPhase;
+
     currentLineIndex: number;
     totalLines: number;
 
@@ -98,7 +113,36 @@ export type TrainingSession = {
     incorrectMoves: number;
 
     completed: boolean;
+
+    /*
+     * Líneas ya cubiertas durante
+     * la fase principal.
+     */
     completedLineIds: string[];
+
+    /*
+     * Número de fallos cometidos desde
+     * cada posición concreta.
+     */
+    positionMistakes:
+    Record<string, number>;
+
+    /*
+     * Posiciones que han resultado
+     * especialmente difíciles.
+     */
+    problematicNodeIds: string[];
+
+    /*
+     * Cola de posiciones que se repasarán
+     * al acabar el entrenamiento normal.
+     */
+    reviewNodeIds: string[];
+
+    /*
+     * Posición actual dentro del repaso.
+     */
+    currentReviewIndex: number;
 };
 
 export type TrainingLine = {
@@ -110,3 +154,42 @@ export type TrainingLine = {
      */
     nodeIds: string[];
 };
+
+export type TrainingPositionPerformance = {
+    nodeId: string;
+
+    sessionsSeen: number;
+
+    correctMoves: number;
+    incorrectMoves: number;
+
+    timesProblematic: number;
+
+    lastSeenAt: string;
+};
+
+export type TrainingPerformance = {
+    trainingId: string;
+
+    totalSessions: number;
+    completedSessions: number;
+
+    totalCorrectMoves: number;
+    totalIncorrectMoves: number;
+
+    totalTrainingTimeMs: number;
+
+    lastTrainedAt: string | null;
+
+    positions:
+    Record<
+        string,
+        TrainingPositionPerformance
+    >;
+};
+
+export type TrainingPerformancesMap =
+    Record<
+        string,
+        TrainingPerformance
+    >;

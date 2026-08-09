@@ -25,9 +25,14 @@ import Toast from "./components/Toast";
 import type {
   TrainingMode,
   TrainingOrder,
+  TrainingPerformancesMap,
+  TrainingSession,
   TrainingSide,
   TrainingsMap,
 } from "./components/training/types";
+import {
+  updateTrainingPerformance,
+} from "./components/training/trainingPerformance";
 import {
   addTraining,
   createTraining,
@@ -425,12 +430,17 @@ type InitialAppState = {
   studyContents: StudyContentsMap;
   workspace: ActiveWorkspace;
   trainings: TrainingsMap;
+  trainingPerformances: TrainingPerformancesMap;
 };
 
 function loadAppState(): InitialAppState {
   const storedState = loadChessktopState();
   const trainings =
     storedState?.trainings ?? {};
+
+  const trainingPerformances =
+    storedState?.trainingPerformances ??
+    {};
 
   const library =
     storedState?.library ?? defaultLibrary;
@@ -477,6 +487,7 @@ function loadAppState(): InitialAppState {
     studyContents,
     workspace,
     trainings,
+    trainingPerformances,
   };
 }
 
@@ -511,6 +522,14 @@ function App() {
   ] = useState<TrainingsMap>(
     initialState.trainings,
   );
+
+  const [
+    trainingPerformances,
+    setTrainingPerformances,
+  ] =
+    useState<TrainingPerformancesMap>(
+      initialState.trainingPerformances,
+    );
 
   const selectedTraining =
     workspace?.type === "training"
@@ -612,20 +631,30 @@ function App() {
   );
 
   useEffect(() => {
-    const stateToSave: ChessktopStorage = {
+    const stateToSave:
+      ChessktopStorage = {
       version: 1,
+
       library,
+
       studyContents,
+
       selectedStudyId,
+
       trainings,
+
+      trainingPerformances,
     };
 
-    saveChessktopState(stateToSave);
+    saveChessktopState(
+      stateToSave,
+    );
   }, [
     library,
     studyContents,
     selectedStudyId,
     trainings,
+    trainingPerformances,
   ]);
 
   useEffect(() => {
@@ -678,6 +707,26 @@ function App() {
     closeNote();
   }
 
+  function handleTrainingSessionCompleted(
+    session: TrainingSession,
+  ) {
+    setTrainingPerformances(
+      (
+        previousPerformances,
+      ) => ({
+        ...previousPerformances,
+
+        [session.trainingId]:
+          updateTrainingPerformance(
+            previousPerformances[
+            session.trainingId
+            ],
+            session,
+          ),
+      }),
+    );
+  }
+
   function handleRenameTraining(
     trainingId: string,
     name: string,
@@ -701,6 +750,30 @@ function App() {
   ) {
     const training =
       trainings[trainingId];
+
+    setTrainingPerformances(
+      (
+        previousPerformances,
+      ) => {
+        if (
+          !previousPerformances[
+          trainingId
+          ]
+        ) {
+          return previousPerformances;
+        }
+
+        const nextPerformances = {
+          ...previousPerformances,
+        };
+
+        delete nextPerformances[
+          trainingId
+        ];
+
+        return nextPerformances;
+      },
+    );
 
     if (
       workspace?.type === "training" &&
@@ -843,6 +916,61 @@ function App() {
       },
     );
 
+    const validTrainingIds =
+      new Set(
+        Object.values(
+          trainings,
+        )
+          .filter(
+            (training) =>
+              validStudyIds.has(
+                training.studyId,
+              ),
+          )
+          .map(
+            (training) =>
+              training.id,
+          ),
+      );
+
+    setTrainingPerformances(
+      (
+        previousPerformances,
+      ) => {
+        const nextPerformances:
+          TrainingPerformancesMap =
+          {};
+
+        let changed = false;
+
+        for (
+          const [
+            trainingId,
+            performance,
+          ]
+          of Object.entries(
+            previousPerformances,
+          )
+        ) {
+          if (
+            validTrainingIds.has(
+              trainingId,
+            )
+          ) {
+            nextPerformances[
+              trainingId
+            ] = performance;
+          } else {
+            changed = true;
+          }
+        }
+
+        return changed
+          ? nextPerformances
+          : previousPerformances;
+      },
+    );
+
     /*
      * Si el workspace apunta a un estudio que ya no
      * existe, elegimos un estudio de respaldo.
@@ -947,6 +1075,12 @@ function App() {
         importedState.trainings ?? {},
       );
 
+      setTrainingPerformances(
+        importedState
+          .trainingPerformances ??
+        {},
+      );
+
       const importedStudyId =
         importedState.selectedStudyId;
 
@@ -1001,6 +1135,7 @@ function App() {
       studyContents,
       selectedStudyId,
       trainings,
+      trainingPerformances,
     });
   }
 
@@ -1400,6 +1535,7 @@ function App() {
           onOpenTraining={openTraining}
           onRenameTraining={handleRenameTraining}
           onDeleteTraining={handleDeleteTraining}
+          trainingPerformances={trainingPerformances}
         />
         {workspace?.type === "training" &&
           selectedTraining &&
@@ -1426,6 +1562,7 @@ function App() {
             onAddNote={
               openNote
             }
+            onSessionCompleted={handleTrainingSessionCompleted}
           />
         ) : (
           <>
