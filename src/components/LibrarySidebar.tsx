@@ -39,6 +39,10 @@ type LibrarySidebarProps = {
         order: TrainingOrder,
     ) => void;
     trainings: TrainingsMap;
+    onImportPgn: (
+        file: File,
+    ) => void;
+    onExportPgn: () => void;
     onOpenTraining: (
         trainingId: string,
     ) => void;
@@ -552,6 +556,8 @@ export default function LibrarySidebar({
     onStudySelect,
     onExportLibrary,
     onImportLibrary,
+    onImportPgn,
+    onExportPgn,
     onCreateTraining,
     onOpenTraining,
     onRenameTraining,
@@ -583,6 +589,9 @@ export default function LibrarySidebar({
         LibraryContextTarget | null
     >(null);
     const importInputRef =
+        useRef<HTMLInputElement>(null);
+
+    const pgnInputRef =
         useRef<HTMLInputElement>(null);
 
     const normalizedSearch =
@@ -1433,23 +1442,58 @@ export default function LibrarySidebar({
                     )}
             </div>
             <div className="library-footer">
-                <button
-                    type="button"
-                    className="library-import-button"
-                    onClick={() =>
-                        importInputRef.current?.click()
-                    }
-                >
-                    Importar biblioteca
-                </button>
+                <div className="library-footer-group">
+                    <span className="library-footer-label">
+                        Biblioteca
+                    </span>
 
-                <button
-                    type="button"
-                    className="library-export-button"
-                    onClick={onExportLibrary}
-                >
-                    Exportar biblioteca
-                </button>
+                    <div className="library-footer-actions">
+                        <button
+                            type="button"
+                            className="library-import-button"
+                            onClick={() =>
+                                importInputRef.current?.click()
+                            }
+                        >
+                            Importar
+                        </button>
+
+                        <button
+                            type="button"
+                            className="library-export-button"
+                            onClick={onExportLibrary}
+                        >
+                            Exportar
+                        </button>
+                    </div>
+                </div>
+
+                <div className="library-footer-group">
+                    <span className="library-footer-label">
+                        PGN
+                    </span>
+
+                    <div className="library-footer-actions">
+                        <button
+                            className="library-import-button"
+                            type="button"
+                            onClick={() =>
+                                pgnInputRef.current?.click()
+                            }
+                        >
+                            Importar
+                        </button>
+
+                        <button
+                            className="library-import-button"
+                            type="button"
+                            onClick={onExportPgn}
+                            disabled={!selectedStudyId}
+                        >
+                            Exportar
+                        </button>
+                    </div>
+                </div>
 
                 <input
                     ref={importInputRef}
@@ -1464,10 +1508,23 @@ export default function LibrarySidebar({
                             onImportLibrary(file);
                         }
 
-                        /*
-                         * Reiniciamos el input para permitir
-                         * volver a importar el mismo archivo.
-                         */
+                        event.target.value = "";
+                    }}
+                />
+
+                <input
+                    ref={pgnInputRef}
+                    type="file"
+                    accept=".pgn,application/x-chess-pgn"
+                    className="library-file-input"
+                    onChange={(event) => {
+                        const file =
+                            event.target.files?.[0];
+
+                        if (file) {
+                            onImportPgn(file);
+                        }
+
                         event.target.value = "";
                     }}
                 />

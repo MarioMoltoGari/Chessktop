@@ -12,6 +12,7 @@
     "postinstall": "npm run prepare:stockfish"
   },
   "dependencies": {
+    "@echecs/pgn": "^5.0.0",
     "chess.js": "^1.4.0",
     "react": "^19.2.8",
     "react-chessboard": "^5.11.0",

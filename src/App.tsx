@@ -41,6 +41,9 @@ import {
 } from "./components/training/trainingService";
 import TrainingWorkspace from "./components/training/TrainingWorkspace";
 import type { ActiveWorkspace } from "./types/workspace";
+import {
+  importPgnAsStudy,
+} from "./imports/pgnImporter";
 
 type MoveNode = {
   id: string;
@@ -137,6 +140,33 @@ function getMovePrefix(
   }
 
   return "";
+}
+
+function getStudyNameFromPgnFile(
+  fileName: string,
+): string {
+  const withoutExtension =
+    fileName.replace(
+      /\.pgn$/i,
+      "",
+    );
+
+  const normalizedName =
+    withoutExtension
+      .replace(
+        /[_-]+/g,
+        " ",
+      )
+      .replace(
+        /\s+/g,
+        " ",
+      )
+      .trim();
+
+  return (
+    normalizedName ||
+    "Estudio importado"
+  );
 }
 
 /**
@@ -1128,6 +1158,120 @@ function App() {
     }
   }
 
+  async function handleImportPgn(
+    file: File,
+  ) {
+    const suggestedName =
+      getStudyNameFromPgnFile(
+        file.name,
+      );
+
+    const requestedName =
+      window.prompt(
+        "Nombre del nuevo estudio:",
+        suggestedName,
+      );
+
+    const studyName =
+      requestedName?.trim();
+
+    if (!studyName) {
+      return;
+    }
+
+    try {
+      const pgnText =
+        await file.text();
+
+      const studyId =
+        crypto.randomUUID();
+
+      const {
+        content,
+      } =
+        importPgnAsStudy(
+          pgnText,
+          studyId,
+        );
+
+      const newStudy = {
+        id: studyId,
+
+        name:
+          studyName,
+
+        folderId:
+          null,
+      };
+
+      /*
+       * La importación PGN siempre crea
+       * un estudio nuevo.
+       */
+      setLibrary(
+        (
+          previousLibrary,
+        ) => ({
+          ...previousLibrary,
+
+          studies: [
+            ...previousLibrary.studies,
+            newStudy,
+          ],
+        }),
+      );
+
+      /*
+       * Insertamos directamente el árbol
+       * importado como contenido del estudio.
+       */
+      setStudyContents(
+        (
+          previousContents,
+        ) => ({
+          ...previousContents,
+
+          [studyId]:
+            content,
+        }),
+      );
+
+      /*
+       * Abrimos automáticamente el estudio
+       * recién creado.
+       */
+      setWorkspace({
+        type: "study",
+        studyId,
+      });
+
+      closeNote();
+
+      setPgnCopied(
+        false,
+      );
+
+      showToast(
+        `PGN importado como "${studyName}".`,
+        3500,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo importar el PGN.";
+
+      console.error(
+        "Error al importar PGN:",
+        error,
+      );
+
+      alert(
+        `No se pudo importar el PGN.\n\n${message}`,
+      );
+    }
+  }
+
   function handleExportLibrary() {
     exportLibrary({
       version: 1,
@@ -1493,20 +1637,65 @@ function App() {
     closeNote();
   }
 
-  async function copyPgn() {
-    if (!pgn) {
+  function handleExportPgn() {
+    if (
+      !selectedStudy ||
+      !pgn
+    ) {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(pgn);
-      setPgnCopied(true);
-    } catch (error) {
-      console.error(
-        "No se pudo copiar el PGN:",
-        error,
+    const blob =
+      new Blob(
+        [pgn],
+        {
+          type:
+            "application/x-chess-pgn;charset=utf-8",
+        },
       );
-    }
+
+    const url =
+      URL.createObjectURL(
+        blob,
+      );
+
+    const link =
+      document.createElement(
+        "a",
+      );
+
+    const safeStudyName =
+      selectedStudy.name
+        .trim()
+        .replace(
+          /[<>:"/\\|?*]+/g,
+          "-",
+        )
+        .replace(
+          /\s+/g,
+          " ",
+        );
+
+    link.href =
+      url;
+
+    link.download =
+      `${safeStudyName || "chessktop-study"}.pgn`;
+
+    document.body.appendChild(
+      link,
+    );
+
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(
+      url,
+    );
+
+    showToast(
+      "PGN exportado correctamente.",
+    );
   }
 
   return (
@@ -1526,6 +1715,7 @@ function App() {
         <LibrarySidebar
           library={library}
           trainings={trainings}
+          trainingPerformances={trainingPerformances}
           selectedStudyId={selectedStudyId}
           onLibraryChange={handleLibraryChange}
           onStudySelect={selectStudy}
@@ -1535,7 +1725,8 @@ function App() {
           onOpenTraining={openTraining}
           onRenameTraining={handleRenameTraining}
           onDeleteTraining={handleDeleteTraining}
-          trainingPerformances={trainingPerformances}
+          onImportPgn={handleImportPgn}
+          onExportPgn={handleExportPgn}
         />
         {workspace?.type === "training" &&
           selectedTraining &&
@@ -1787,25 +1978,6 @@ function App() {
                       } ${currentNode.san}`}
                   </strong>
                 </p>
-
-                <div className="export-row">
-                  <span className="export-description">
-                    Exportar el árbol completo
-                  </span>
-
-                  <button
-                    type="button"
-                    className="pgn-button"
-                    onClick={copyPgn}
-                    disabled={
-                      nodes.root.children.length === 0
-                    }
-                  >
-                    {pgnCopied
-                      ? "PGN copiado"
-                      : "Copiar PGN"}
-                  </button>
-                </div>
               </div>
             </aside>
           </>

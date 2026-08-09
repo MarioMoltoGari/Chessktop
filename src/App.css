@@ -784,15 +784,38 @@ textarea,
 }
 
 .library-footer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px;
+}
 
-  flex-shrink: 0;
+.library-footer-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 
-  padding: 14px 18px 18px;
-  border-top: 1px solid #dedbd3;
-  background: #ffffff;
+  min-width: 0;
+}
+
+.library-footer-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  opacity: 0.58;
+}
+
+.library-footer-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.library-footer-actions button {
+  white-space: nowrap;
 }
 
 .library-import-button,
