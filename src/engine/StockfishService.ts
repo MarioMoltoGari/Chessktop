@@ -10,17 +10,40 @@ type ErrorListener = (
     error: Error,
 ) => void;
 
+type PendingWait = {
+    generation: number;
+
+    reject: (
+        error: Error,
+    ) => void;
+
+    cleanup: () => void;
+};
+
 const WORKER_URL =
     `${import.meta.env.BASE_URL}stockfish/stockfish-18-lite-single.js`;
 
+const INITIALIZATION_TIMEOUT_MS =
+    20000;
+
+const READY_TIMEOUT_MS =
+    10000;
+
+const STOP_TIMEOUT_MS =
+    1500;
+
 export default class StockfishService {
-    private worker: Worker | null = null;
+    private worker: Worker | null =
+        null;
 
     private messageListeners =
         new Set<MessageListener>();
 
     private errorListeners =
         new Set<ErrorListener>();
+
+    private pendingWaits =
+        new Set<PendingWait>();
 
     private initializationPromise:
         Promise<void> | null = null;
@@ -30,116 +53,192 @@ export default class StockfishService {
     private destroyed = false;
 
     /*
-     * Serializa las operaciones para evitar:
+     * Identifica la instancia actual
+     * del Worker.
      *
-     * stop → position → go
-     * stop → position → go
+     * Cada vez que creamos o destruimos
+     * uno, la generación cambia.
      *
-     * ejecutándose simultáneamente.
+     * Así podemos ignorar cualquier
+     * respuesta perteneciente a una
+     * instancia antigua.
+     */
+    private workerGeneration = 0;
+
+    /*
+     * Serializa stop / position / go.
      */
     private commandQueue:
-        Promise<void> = Promise.resolve();
+        Promise<void> =
+        Promise.resolve();
 
     subscribe(
         listener: MessageListener,
     ): () => void {
-        this.messageListeners.add(listener);
+        this.messageListeners.add(
+            listener,
+        );
 
         return () => {
-            this.messageListeners.delete(listener);
+            this.messageListeners.delete(
+                listener,
+            );
         };
     }
 
     subscribeToErrors(
         listener: ErrorListener,
     ): () => void {
-        this.errorListeners.add(listener);
+        this.errorListeners.add(
+            listener,
+        );
 
         return () => {
-            this.errorListeners.delete(listener);
+            this.errorListeners.delete(
+                listener,
+            );
         };
     }
 
-    async initialize(): Promise<void> {
+    async initialize():
+        Promise<void> {
         if (this.destroyed) {
             throw new Error(
                 "El servicio de Stockfish ha sido destruido.",
             );
         }
 
-        if (this.initialized) {
+        if (
+            this.initialized &&
+            this.worker
+        ) {
             return;
         }
 
-        if (this.initializationPromise) {
-            return this.initializationPromise;
+        if (
+            this.initializationPromise
+        ) {
+            return (
+                this.initializationPromise
+            );
         }
 
-        this.initializationPromise =
+        const initializationPromise =
             this.createAndInitializeWorker();
 
+        this.initializationPromise =
+            initializationPromise;
+
         try {
-            await this.initializationPromise;
+            await initializationPromise;
         } catch (error) {
-            this.initializationPromise = null;
+            if (
+                this.initializationPromise ===
+                initializationPromise
+            ) {
+                this.initializationPromise =
+                    null;
+            }
+
             throw error;
+        }
+
+        if (
+            this.initializationPromise ===
+            initializationPromise
+        ) {
+            this.initializationPromise =
+                null;
         }
     }
 
     async analyze(
-        options: StockfishAnalysisOptions,
+        options:
+            StockfishAnalysisOptions,
     ): Promise<void> {
-        return this.enqueue(async () => {
-            await this.initialize();
+        return this.enqueue(
+            async () => {
+                await this.initialize();
 
-            /*
-             * Solo detenemos si realmente hay
-             * una búsqueda en curso.
-             */
-            await this.stopInternal();
+                await this.stopInternal();
 
-            this.send(
-                `setoption name MultiPV value ${options.multiPv}`,
-            );
+                this.assertUsable();
 
-            /*
-             * Confirmamos que la opción anterior
-             * se haya procesado.
-             */
-            await this.waitUntilReady();
+                this.send(
+                    `setoption name MultiPV value ${options.multiPv}`,
+                );
 
-            this.send(
-                `position fen ${options.fen}`,
-            );
+                await this.waitUntilReady();
 
-            this.send(
-                `go depth ${options.depth}`,
-            );
+                this.assertUsable();
 
-            this.searching = true;
-        });
+                this.send(
+                    `position fen ${options.fen}`,
+                );
+
+                this.send(
+                    `go depth ${options.depth}`,
+                );
+
+                this.searching =
+                    true;
+            },
+        );
     }
 
-    async stop(): Promise<void> {
-        return this.enqueue(async () => {
-            await this.stopInternal();
-        });
+    async stop():
+        Promise<void> {
+        return this.enqueue(
+            async () => {
+                await this.stopInternal();
+            },
+        );
     }
 
-    async restart(): Promise<void> {
-        this.terminateWorker();
+    async restart():
+        Promise<void> {
+        if (this.destroyed) {
+            throw new Error(
+                "El servicio de Stockfish ha sido destruido.",
+            );
+        }
 
-        this.destroyed = false;
-        this.initialized = false;
-        this.initializationPromise = null;
-        this.searching = false;
+        /*
+         * Cancelamos inmediatamente todo
+         * lo relacionado con el Worker
+         * anterior.
+         */
+        this.resetWorker(
+            "Stockfish se está reiniciando.",
+        );
+
+        /*
+         * La cola anterior puede contener
+         * operaciones pertenecientes al
+         * Worker destruido.
+         *
+         * Empezamos una cola limpia.
+         */
+        this.commandQueue =
+            Promise.resolve();
 
         await this.initialize();
     }
 
     destroy(): void {
-        this.destroyed = true;
-        this.terminateWorker();
+        if (this.destroyed) {
+            return;
+        }
+
+        this.destroyed =
+            true;
+
+        this.resetWorker(
+            "El servicio de Stockfish ha sido destruido.",
+        );
+
+        this.commandQueue =
+            Promise.resolve();
 
         this.messageListeners.clear();
         this.errorListeners.clear();
@@ -147,36 +246,84 @@ export default class StockfishService {
 
     private async createAndInitializeWorker():
         Promise<void> {
-        const worker = new Worker(
-            WORKER_URL,
-        );
+        if (this.destroyed) {
+            throw new Error(
+                "El servicio de Stockfish ha sido destruido.",
+            );
+        }
 
-        this.worker = worker;
+        /*
+         * Por seguridad nunca mantenemos
+         * dos Workers.
+         */
+        if (this.worker) {
+            this.resetWorker(
+                "Se ha sustituido la instancia anterior de Stockfish.",
+            );
+        }
 
-        worker.onmessage = (
-            event: MessageEvent<unknown>,
-        ) => {
-            const rawData = String(
-                event.data ?? "",
+        const generation =
+            ++this.workerGeneration;
+
+        const worker =
+            new Worker(
+                WORKER_URL,
             );
 
-            const messages = rawData
-                .split(/\r?\n/)
-                .map((message) => message.trim())
-                .filter(Boolean);
+        this.worker =
+            worker;
 
-            for (const message of messages) {
+        worker.onmessage = (
+            event:
+                MessageEvent<unknown>,
+        ) => {
+            /*
+             * Un Worker antiguo nunca puede
+             * afectar al estado actual.
+             */
+            if (
+                generation !==
+                this.workerGeneration ||
+                worker !== this.worker ||
+                this.destroyed
+            ) {
+                return;
+            }
+
+            const rawData =
+                String(
+                    event.data ?? "",
+                );
+
+            const messages =
+                rawData
+                    .split(/\r?\n/)
+                    .map(
+                        (message) =>
+                            message.trim(),
+                    )
+                    .filter(Boolean);
+
+            for (
+                const message
+                of messages
+            ) {
                 if (
-                    message.startsWith("bestmove")
+                    message.startsWith(
+                        "bestmove",
+                    )
                 ) {
-                    this.searching = false;
+                    this.searching =
+                        false;
                 }
 
                 for (
                     const listener
                     of this.messageListeners
                 ) {
-                    listener(message);
+                    listener(
+                        message,
+                    );
                 }
             }
         };
@@ -184,10 +331,20 @@ export default class StockfishService {
         worker.onerror = (
             event: ErrorEvent,
         ) => {
-            const error = new Error(
-                event.message ||
-                "Error interno de Stockfish.",
-            );
+            if (
+                generation !==
+                this.workerGeneration ||
+                worker !== this.worker ||
+                this.destroyed
+            ) {
+                return;
+            }
+
+            const error =
+                new Error(
+                    event.message ||
+                    "Error interno de Stockfish.",
+                );
 
             console.error(
                 "Error interno de Stockfish:",
@@ -195,40 +352,81 @@ export default class StockfishService {
             );
 
             /*
-             * El Worker WASM queda inutilizable
-             * después de un RuntimeError.
+             * Un RuntimeError de WASM deja
+             * esta instancia inutilizable.
              */
-            this.terminateWorker();
-
-            this.initialized = false;
-            this.initializationPromise = null;
-            this.searching = false;
+            this.resetWorker(
+                "El Worker de Stockfish ha fallado.",
+            );
 
             for (
                 const listener
                 of this.errorListeners
             ) {
-                listener(error);
+                listener(
+                    error,
+                );
             }
         };
 
-        const uciReady =
-            this.waitForMessage(
-                (message) =>
-                    message === "uciok",
+        try {
+            const uciReady =
+                this.waitForMessage(
+                    (message) =>
+                        message ===
+                        "uciok",
+                    INITIALIZATION_TIMEOUT_MS,
+                    generation,
+                );
+
+            this.sendToGeneration(
+                "uci",
+                generation,
             );
 
-        this.send("uci");
+            await uciReady;
 
-        await uciReady;
+            this.sendToGeneration(
+                "setoption name Hash value 32",
+                generation,
+            );
 
-        this.send(
-            "setoption name Hash value 32",
-        );
+            await this.waitUntilReady(
+                generation,
+            );
 
-        await this.waitUntilReady();
+            if (
+                generation !==
+                this.workerGeneration ||
+                worker !==
+                this.worker ||
+                this.destroyed
+            ) {
+                throw new Error(
+                    "La inicialización de Stockfish fue cancelada.",
+                );
+            }
 
-        this.initialized = true;
+            this.initialized =
+                true;
+        } catch (error) {
+            /*
+             * Solo destruimos si sigue siendo
+             * el Worker cuya inicialización
+             * acaba de fallar.
+             */
+            if (
+                generation ===
+                this.workerGeneration &&
+                worker === this.worker
+            ) {
+                this.resetWorker(
+                    "No se pudo inicializar Stockfish.",
+                );
+            }
+
+            throw error;
+        }
     }
 
     private async stopInternal():
@@ -240,44 +438,69 @@ export default class StockfishService {
             return;
         }
 
+        const generation =
+            this.workerGeneration;
+
         const bestMovePromise =
             this.waitForMessage(
                 (message) =>
                     message.startsWith(
                         "bestmove",
                     ),
-                1500,
+                STOP_TIMEOUT_MS,
+                generation,
             );
 
-        this.send("stop");
+        this.sendToGeneration(
+            "stop",
+            generation,
+        );
 
         try {
             await bestMovePromise;
         } catch {
             /*
-             * No enviamos otro stop. Continuamos
-             * para evitar una cascada de órdenes.
+             * Si stop no devuelve bestmove
+             * a tiempo no bloqueamos la cola.
+             *
+             * El siguiente isready servirá
+             * como barrera de sincronización.
              */
         }
 
-        this.searching = false;
+        if (
+            generation ===
+            this.workerGeneration
+        ) {
+            this.searching =
+                false;
+        }
     }
 
-    private async waitUntilReady():
-        Promise<void> {
+    private async waitUntilReady(
+        generation =
+            this.workerGeneration,
+    ): Promise<void> {
         const readyPromise =
             this.waitForMessage(
                 (message) =>
-                    message === "readyok",
+                    message ===
+                    "readyok",
+                READY_TIMEOUT_MS,
+                generation,
             );
 
-        this.send("isready");
+        this.sendToGeneration(
+            "isready",
+            generation,
+        );
 
         await readyPromise;
     }
 
     private enqueue(
-        operation: () => Promise<void>,
+        operation:
+            () => Promise<void>,
     ): Promise<void> {
         const queuedOperation =
             this.commandQueue.then(
@@ -286,35 +509,125 @@ export default class StockfishService {
             );
 
         this.commandQueue =
-            queuedOperation.catch(() => {
-                /*
-                 * Evita que un error bloquee para siempre
-                 * las operaciones posteriores.
-                 */
-            });
+            queuedOperation.catch(
+                () => {
+                    /*
+                     * Un error no debe dejar
+                     * la cola permanentemente
+                     * rechazada.
+                     */
+                },
+            );
 
         return queuedOperation;
     }
 
-    private send(command: string): void {
+    private assertUsable():
+        void {
+        if (this.destroyed) {
+            throw new Error(
+                "El servicio de Stockfish ha sido destruido.",
+            );
+        }
+
         if (!this.worker) {
             throw new Error(
                 "Stockfish no está iniciado.",
             );
         }
-
-        this.worker.postMessage(command);
     }
 
-    private terminateWorker(): void {
-        if (!this.worker) {
+    private send(
+        command: string,
+    ): void {
+        this.sendToGeneration(
+            command,
+            this.workerGeneration,
+        );
+    }
+
+    private sendToGeneration(
+        command: string,
+        generation: number,
+    ): void {
+        if (this.destroyed) {
+            throw new Error(
+                "El servicio de Stockfish ha sido destruido.",
+            );
+        }
+
+        if (
+            !this.worker ||
+            generation !==
+            this.workerGeneration
+        ) {
+            throw new Error(
+                "La instancia de Stockfish ya no está disponible.",
+            );
+        }
+
+        this.worker.postMessage(
+            command,
+        );
+    }
+
+    private resetWorker(
+        reason: string,
+    ): void {
+        /*
+         * Primero invalidamos la generación.
+         * Incluso si llegase algún evento
+         * durante terminate(), será ignorado.
+         */
+        this.workerGeneration += 1;
+
+        this.rejectPendingWaits(
+            new Error(reason),
+        );
+
+        const worker =
+            this.worker;
+
+        this.worker =
+            null;
+
+        this.initialized =
+            false;
+
+        this.initializationPromise =
+            null;
+
+        this.searching =
+            false;
+
+        if (!worker) {
             return;
         }
 
-        try {
-            this.worker.terminate();
-        } finally {
-            this.worker = null;
+        worker.onmessage =
+            null;
+
+        worker.onerror =
+            null;
+
+        worker.terminate();
+    }
+
+    private rejectPendingWaits(
+        error: Error,
+    ): void {
+        const waits = [
+            ...this.pendingWaits,
+        ];
+
+        this.pendingWaits.clear();
+
+        for (
+            const wait
+            of waits
+        ) {
+            wait.cleanup();
+            wait.reject(error);
         }
     }
 
@@ -322,34 +635,170 @@ export default class StockfishService {
         predicate: (
             message: string,
         ) => boolean,
-        timeoutMilliseconds = 10000,
+        timeoutMilliseconds:
+            number,
+        generation =
+            this.workerGeneration,
     ): Promise<string> {
         return new Promise(
-            (resolve, reject) => {
-                const unsubscribe =
-                    this.subscribe((message) => {
-                        if (!predicate(message)) {
+            (
+                resolve,
+                reject,
+            ) => {
+                if (
+                    this.destroyed ||
+                    !this.worker ||
+                    generation !==
+                    this.workerGeneration
+                ) {
+                    reject(
+                        new Error(
+                            "La instancia de Stockfish ya no está disponible.",
+                        ),
+                    );
+
+                    return;
+                }
+
+                let settled =
+                    false;
+
+                let timeoutId:
+                    number | null =
+                    null;
+
+                let unsubscribe:
+                    (() => void) | null =
+                    null;
+
+                let pendingWait:
+                    PendingWait | null =
+                    null;
+
+                const cleanup =
+                    () => {
+                        if (
+                            timeoutId !==
+                            null
+                        ) {
+                            window.clearTimeout(
+                                timeoutId,
+                            );
+
+                            timeoutId =
+                                null;
+                        }
+
+                        if (
+                            unsubscribe
+                        ) {
+                            unsubscribe();
+                            unsubscribe =
+                                null;
+                        }
+
+                        if (
+                            pendingWait
+                        ) {
+                            this.pendingWaits.delete(
+                                pendingWait,
+                            );
+
+                            pendingWait =
+                                null;
+                        }
+                    };
+
+                const resolveOnce =
+                    (
+                        message: string,
+                    ) => {
+                        if (settled) {
                             return;
                         }
 
-                        window.clearTimeout(
-                            timeoutId,
+                        settled =
+                            true;
+
+                        cleanup();
+
+                        resolve(
+                            message,
                         );
+                    };
 
-                        unsubscribe();
-                        resolve(message);
-                    });
+                const rejectOnce =
+                    (
+                        error: Error,
+                    ) => {
+                        if (settled) {
+                            return;
+                        }
 
-                const timeoutId =
-                    window.setTimeout(() => {
-                        unsubscribe();
+                        settled =
+                            true;
+
+                        cleanup();
 
                         reject(
-                            new Error(
-                                "Stockfish no respondió a tiempo.",
-                            ),
+                            error,
                         );
-                    }, timeoutMilliseconds);
+                    };
+
+                unsubscribe =
+                    this.subscribe(
+                        (
+                            message,
+                        ) => {
+                            if (
+                                generation !==
+                                this.workerGeneration
+                            ) {
+                                return;
+                            }
+
+                            if (
+                                !predicate(
+                                    message,
+                                )
+                            ) {
+                                return;
+                            }
+
+                            resolveOnce(
+                                message,
+                            );
+                        },
+                    );
+
+                const wait:
+                    PendingWait = {
+                    generation,
+
+                    reject:
+                        rejectOnce,
+
+                    cleanup,
+                };
+
+                pendingWait =
+                    wait;
+
+                this.pendingWaits.add(
+                    wait,
+                );
+
+                timeoutId =
+                    window.setTimeout(
+                        () => {
+                            rejectOnce(
+                                new Error(
+                                    "Stockfish no respondió a tiempo.",
+                                ),
+                            );
+                        },
+                        timeoutMilliseconds,
+                    );
             },
         );
     }

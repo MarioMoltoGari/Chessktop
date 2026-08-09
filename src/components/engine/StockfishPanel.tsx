@@ -1,4 +1,6 @@
-import { useState } from "react";
+import {
+  useState,
+} from "react";
 
 import {
   useStockfish,
@@ -12,58 +14,81 @@ type StockfishPanelProps = {
   hasActiveStudy: boolean;
 };
 
-const DEFAULT_DEPTH = 18;
+const DEFAULT_DEPTH =
+  18;
 
 export default function StockfishPanel({
   fen,
   hasActiveStudy,
 }: StockfishPanelProps) {
-  const [enabled, setEnabled] =
+  const [
+    enabled,
+    setEnabled,
+  ] =
     useState(true);
 
-  const [multiPv, setMultiPv] =
+  const [
+    multiPv,
+    setMultiPv,
+  ] =
     useState<1 | 3>(3);
 
   const engineEnabled =
-    enabled && hasActiveStudy;
+    enabled &&
+    hasActiveStudy;
 
   const {
     status,
     lines,
     currentDepth,
     error,
-  } = useStockfish({
-    fen,
-    enabled: engineEnabled,
-    depth: DEFAULT_DEPTH,
-    multiPv,
-  });
+    retry,
+  } =
+    useStockfish({
+      fen,
+
+      enabled:
+        engineEnabled,
+
+      depth:
+        DEFAULT_DEPTH,
+
+      multiPv,
+    });
 
   const principalLine =
     lines.find(
-      (line) => line.multipv === 1,
+      (line) =>
+        line.multipv ===
+        1,
     ) ?? null;
 
   return (
     <section className="stockfish-panel">
       <EvaluationBar
         score={
-          principalLine?.score ?? null
+          principalLine
+            ?.score ??
+          null
         }
       />
 
       <div className="engine-toolbar">
         <button
           type="button"
-          className={`engine-power-button ${
-            enabled ? "active" : ""
-          }`}
+          className={`engine-power-button ${enabled
+              ? "active"
+              : ""
+            }`}
           onClick={() =>
             setEnabled(
-              (current) => !current,
+              (current) =>
+                !current,
             )
           }
-          disabled={!hasActiveStudy}
+          disabled={
+            !hasActiveStudy
+          }
         >
           {enabled
             ? "Motor activo"
@@ -72,6 +97,7 @@ export default function StockfishPanel({
 
         <span className="engine-depth-status">
           Prof.{" "}
+
           <strong>
             {currentDepth ||
               DEFAULT_DEPTH}
@@ -87,7 +113,9 @@ export default function StockfishPanel({
                 : ""
             }
             onClick={() =>
-              setMultiPv(1)
+              setMultiPv(
+                1,
+              )
             }
           >
             1
@@ -101,7 +129,9 @@ export default function StockfishPanel({
                 : ""
             }
             onClick={() =>
-              setMultiPv(3)
+              setMultiPv(
+                3,
+              )
             }
           >
             3
@@ -109,31 +139,58 @@ export default function StockfishPanel({
         </div>
 
         <span className="engine-status-text">
-          {status === "loading" &&
+          {status ===
+            "loading" &&
             "Cargando"}
 
-          {status === "analyzing" &&
+          {status ===
+            "analyzing" &&
             "Analizando"}
 
-          {status === "ready" &&
+          {status ===
+            "ready" &&
             "Listo"}
 
-          {status === "paused" &&
+          {status ===
+            "paused" &&
             "Pausado"}
 
-          {status === "error" &&
+          {status ===
+            "error" &&
             "Error"}
         </span>
       </div>
 
       {error ? (
-        <p className="engine-error">
-          {error}
-        </p>
+        <div className="engine-error-container">
+          <div className="engine-error-content">
+            <strong>
+              Stockfish no está disponible
+            </strong>
+
+            <span>
+              {error}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="engine-retry-button"
+            onClick={
+              retry
+            }
+          >
+            Reintentar motor
+          </button>
+        </div>
       ) : (
         <EngineLines
-          lines={lines}
-          expectedLines={multiPv}
+          lines={
+            lines
+          }
+          expectedLines={
+            multiPv
+          }
         />
       )}
     </section>

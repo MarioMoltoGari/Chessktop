@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useRef,
     useState,
@@ -19,41 +20,82 @@ import type {
     StockfishHookResult,
 } from "./types";
 
+const MAX_RECOVERY_ATTEMPTS =
+    1;
+
 export function useStockfish({
     fen,
     enabled,
     depth,
     multiPv,
 }: StockfishHookOptions): StockfishHookResult {
-    const activeAnalysisIdRef =
-        useRef<string | null>(null);
-
     const serviceRef =
-        useRef<StockfishService | null>(null);
+        useRef<StockfishService | null>(
+            null,
+        );
 
-    const activeFenRef = useRef(fen);
-    const analysisFenRef = useRef(fen);
+    const activeFenRef =
+        useRef(fen);
 
-    const optionsRef = useRef({
-        enabled,
-        depth,
-        multiPv,
-    });
+    const analysisFenRef =
+        useRef(fen);
+
+    const optionsRef =
+        useRef({
+            enabled,
+            depth,
+            multiPv,
+        });
+
+    const mountedRef =
+        useRef(false);
+
+    /*
+     * Cada análisis recibe un ID.
+     *
+     * Los errores de análisis antiguos
+     * no pueden modificar la UI actual.
+     */
+    const activeAnalysisIdRef =
+        useRef<string | null>(
+            null,
+        );
+
+    /*
+     * Evita dos recuperaciones simultáneas.
+     */
+    const recoveryPromiseRef =
+        useRef<Promise<void> | null>(
+            null,
+        );
+
+    const recoveryAttemptsRef =
+        useRef(0);
 
     const [status, setStatus] =
-        useState<EngineStatus>("loading");
+        useState<EngineStatus>(
+            "loading",
+        );
 
     const [lines, setLines] =
-        useState<EngineLine[]>([]);
+        useState<EngineLine[]>(
+            [],
+        );
 
-    const [currentDepth, setCurrentDepth] =
+    const [
+        currentDepth,
+        setCurrentDepth,
+    ] =
         useState(0);
 
     const [error, setError] =
-        useState<string | null>(null);
+        useState<string | null>(
+            null,
+        );
 
     useEffect(() => {
-        activeFenRef.current = fen;
+        activeFenRef.current =
+            fen;
     }, [fen]);
 
     useEffect(() => {
@@ -68,165 +110,442 @@ export function useStockfish({
         multiPv,
     ]);
 
-    useEffect(() => {
-        const service =
-            new StockfishService();
-
-        serviceRef.current = service;
-
-        const unsubscribe =
-            service.subscribe((message) => {
+    const recoverService =
+        useCallback(
+            async (
+                service:
+                    StockfishService,
+            ) => {
+                /*
+                 * Si ya existe una recuperación,
+                 * todos esperan la misma.
+                 */
                 if (
-                    message.startsWith("bestmove")
+                    recoveryPromiseRef.current
                 ) {
-                    setStatus(
-                        optionsRef.current.enabled
-                            ? "ready"
-                            : "paused",
+                    return (
+                        recoveryPromiseRef.current
                     );
-
-                    return;
                 }
 
-                const parsed =
-                    parseStockfishInfo(message);
-
-                if (!parsed) {
-                    return;
-                }
-
-                const analyzedFen =
-                    analysisFenRef.current;
-
-                const line: EngineLine = {
-                    multipv: parsed.multipv,
-                    depth: parsed.depth,
-                    selectiveDepth:
-                        parsed.selectiveDepth,
-
-                    score: normalizeScoreForWhite(
-                        parsed.score,
-                        analyzedFen,
-                    ),
-
-                    uciMoves: parsed.uciMoves,
-
-                    sanMoves: convertUciToSan(
-                        analyzedFen,
-                        parsed.uciMoves,
-                    ),
-                };
-
-                setCurrentDepth(
-                    (previousDepth) =>
-                        Math.max(
-                            previousDepth,
-                            parsed.depth,
-                        ),
-                );
-
-                setLines((previousLines) => {
-                    const updatedLines =
-                        previousLines.filter(
-                            (existingLine) =>
-                                existingLine.multipv !==
-                                line.multipv,
+                if (
+                    recoveryAttemptsRef.current >=
+                    MAX_RECOVERY_ATTEMPTS
+                ) {
+                    if (
+                        mountedRef.current
+                    ) {
+                        setError(
+                            "Stockfish no está disponible.",
                         );
 
-                    updatedLines.push(line);
+                        setStatus(
+                            "error",
+                        );
+                    }
 
-                    return updatedLines.sort(
-                        (first, second) =>
-                            first.multipv -
-                            second.multipv,
-                    );
-                });
-            });
+                    return;
+                }
 
-        const unsubscribeFromErrors =
-            service.subscribeToErrors(
-                async () => {
-                    console.warn(
-                        "Stockfish ha fallado. Reiniciando...",
-                    );
+                recoveryAttemptsRef.current +=
+                    1;
 
-                    setStatus("loading");
-                    setLines([]);
-                    setCurrentDepth(0);
+                const recoveryPromise =
+                    (async () => {
+                        if (
+                            mountedRef.current
+                        ) {
+                            setStatus(
+                                "loading",
+                            );
 
-                    try {
-                        await service.restart();
+                            setLines(
+                                [],
+                            );
 
-                        setError(null);
+                            setCurrentDepth(
+                                0,
+                            );
 
-                        const currentOptions =
-                            optionsRef.current;
+                            setError(
+                                null,
+                            );
+                        }
 
-                        if (currentOptions.enabled) {
-                            setStatus("analyzing");
+                        try {
+                            await service.restart();
 
-                            analysisFenRef.current =
+                            if (
+                                !mountedRef.current ||
+                                serviceRef.current !==
+                                service
+                            ) {
+                                return;
+                            }
+
+                            const currentOptions =
+                                optionsRef.current;
+
+                            if (
+                                !currentOptions.enabled
+                            ) {
+                                setStatus(
+                                    "paused",
+                                );
+
+                                return;
+                            }
+
+                            const currentFen =
                                 activeFenRef.current;
 
+                            analysisFenRef.current =
+                                currentFen;
+
+                            setStatus(
+                                "analyzing",
+                            );
+
                             await service.analyze({
-                                fen: activeFenRef.current,
+                                fen:
+                                    currentFen,
+
                                 depth:
                                     currentOptions.depth,
+
                                 multiPv:
                                     currentOptions.multiPv,
                             });
-                        } else {
-                            setStatus("paused");
+
+                            if (
+                                mountedRef.current &&
+                                serviceRef.current ===
+                                service
+                            ) {
+                                recoveryAttemptsRef.current =
+                                    0;
+
+                                setError(
+                                    null,
+                                );
+                            }
+                        } catch (
+                        restartError
+                        ) {
+                            console.error(
+                                "No se pudo recuperar Stockfish:",
+                                restartError,
+                            );
+
+                            if (
+                                mountedRef.current &&
+                                serviceRef.current ===
+                                service
+                            ) {
+                                setError(
+                                    "No se pudo reiniciar Stockfish.",
+                                );
+
+                                setStatus(
+                                    "error",
+                                );
+                            }
                         }
-                    } catch (restartError) {
-                        console.error(
-                            "No se pudo reiniciar Stockfish:",
-                            restartError,
-                        );
+                    })();
 
-                        setError(
-                            "No se pudo reiniciar Stockfish.",
-                        );
+                recoveryPromiseRef.current =
+                    recoveryPromise;
 
-                        setStatus("error");
+                try {
+                    await recoveryPromise;
+                } finally {
+                    if (
+                        recoveryPromiseRef.current ===
+                        recoveryPromise
+                    ) {
+                        recoveryPromiseRef.current =
+                            null;
                     }
+                }
+            },
+            [],
+        );
+
+    /*
+     * Permite al usuario intentar recuperar
+     * manualmente Stockfish después de que
+     * haya fallado la recuperación automática.
+     */
+    const retry =
+        useCallback(() => {
+            const service =
+                serviceRef.current;
+
+            if (
+                !service ||
+                !mountedRef.current
+            ) {
+                return;
+            }
+
+            /*
+             * El usuario está iniciando un nuevo
+             * intento manual, así que volvemos a
+             * permitir la recuperación.
+             */
+            recoveryAttemptsRef.current =
+                0;
+
+            activeAnalysisIdRef.current =
+                null;
+
+            setError(
+                null,
+            );
+
+            setLines(
+                [],
+            );
+
+            setCurrentDepth(
+                0,
+            );
+
+            setStatus(
+                "loading",
+            );
+
+            void recoverService(
+                service,
+            );
+        }, [
+            recoverService,
+        ]);
+
+    /*
+     * Ciclo de vida del servicio.
+     */
+    useEffect(() => {
+        mountedRef.current =
+            true;
+
+        const service =
+            new StockfishService();
+
+        serviceRef.current =
+            service;
+
+        const unsubscribe =
+            service.subscribe(
+                (message) => {
+                    if (
+                        !mountedRef.current ||
+                        serviceRef.current !==
+                        service
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        message.startsWith(
+                            "bestmove",
+                        )
+                    ) {
+                        setStatus(
+                            optionsRef.current
+                                .enabled
+                                ? "ready"
+                                : "paused",
+                        );
+
+                        return;
+                    }
+
+                    const parsed =
+                        parseStockfishInfo(
+                            message,
+                        );
+
+                    if (!parsed) {
+                        return;
+                    }
+
+                    const analyzedFen =
+                        analysisFenRef.current;
+
+                    const line:
+                        EngineLine = {
+                        multipv:
+                            parsed.multipv,
+
+                        depth:
+                            parsed.depth,
+
+                        selectiveDepth:
+                            parsed.selectiveDepth,
+
+                        score:
+                            normalizeScoreForWhite(
+                                parsed.score,
+                                analyzedFen,
+                            ),
+
+                        uciMoves:
+                            parsed.uciMoves,
+
+                        sanMoves:
+                            convertUciToSan(
+                                analyzedFen,
+                                parsed.uciMoves,
+                            ),
+                    };
+
+                    setCurrentDepth(
+                        (
+                            previousDepth,
+                        ) =>
+                            Math.max(
+                                previousDepth,
+                                parsed.depth,
+                            ),
+                    );
+
+                    setLines(
+                        (
+                            previousLines,
+                        ) => {
+                            const updatedLines =
+                                previousLines.filter(
+                                    (
+                                        existingLine,
+                                    ) =>
+                                        existingLine.multipv !==
+                                        line.multipv,
+                                );
+
+                            updatedLines.push(
+                                line,
+                            );
+
+                            return updatedLines.sort(
+                                (
+                                    first,
+                                    second,
+                                ) =>
+                                    first.multipv -
+                                    second.multipv,
+                            );
+                        },
+                    );
                 },
             );
 
-        service
+        const unsubscribeFromErrors =
+            service.subscribeToErrors(
+                () => {
+                    if (
+                        !mountedRef.current ||
+                        serviceRef.current !==
+                        service
+                    ) {
+                        return;
+                    }
+
+                    console.warn(
+                        "Stockfish ha fallado. Intentando recuperar el motor...",
+                    );
+
+                    void recoverService(
+                        service,
+                    );
+                },
+            );
+
+        /*
+         * Inicialización inicial.
+         *
+         * analyze() también sabe inicializar
+         * el servicio, pero hacemos esto para
+         * reflejar correctamente "Cargando"
+         * incluso antes del primer análisis.
+         */
+        void service
             .initialize()
             .then(() => {
+                if (
+                    !mountedRef.current ||
+                    serviceRef.current !==
+                    service
+                ) {
+                    return;
+                }
+
+                recoveryAttemptsRef.current =
+                    0;
+
+                setError(
+                    null,
+                );
+
                 setStatus(
                     optionsRef.current.enabled
                         ? "ready"
                         : "paused",
                 );
             })
-            .catch((initializationError) => {
-                console.error(
-                    "No se pudo iniciar Stockfish:",
+            .catch(
+                (
                     initializationError,
-                );
+                ) => {
+                    if (
+                        !mountedRef.current ||
+                        serviceRef.current !==
+                        service
+                    ) {
+                        return;
+                    }
 
-                setError(
-                    "No se pudo iniciar Stockfish.",
-                );
+                    console.warn(
+                        "La inicialización inicial de Stockfish ha fallado. Intentando recuperar...",
+                        initializationError,
+                    );
 
-                setStatus("error");
-            });
+                    void recoverService(
+                        service,
+                    );
+                },
+            );
 
         return () => {
-            unsubscribe();
-            unsubscribeFromErrors();
+            mountedRef.current =
+                false;
 
             activeAnalysisIdRef.current =
                 null;
 
-            service.destroy();
-            serviceRef.current = null;
-        };
-    }, []);
+            recoveryPromiseRef.current =
+                null;
 
+            unsubscribe();
+            unsubscribeFromErrors();
+
+            service.destroy();
+
+            if (
+                serviceRef.current ===
+                service
+            ) {
+                serviceRef.current =
+                    null;
+            }
+        };
+    }, [
+        recoverService,
+    ]);
+
+    /*
+     * Análisis de posición.
+     */
     useEffect(() => {
         const service =
             serviceRef.current;
@@ -241,35 +560,55 @@ export function useStockfish({
         activeAnalysisIdRef.current =
             analysisId;
 
+        /*
+         * Dejamos que el render actual
+         * termine antes de limpiar las
+         * líneas anteriores.
+         */
         const uiTimeoutId =
-            window.setTimeout(() => {
-                if (
-                    activeAnalysisIdRef.current !==
-                    analysisId
-                ) {
-                    return;
-                }
+            window.setTimeout(
+                () => {
+                    if (
+                        !mountedRef.current ||
+                        activeAnalysisIdRef.current !==
+                        analysisId
+                    ) {
+                        return;
+                    }
 
-                setLines([]);
-                setCurrentDepth(0);
-                setError(null);
+                    setLines(
+                        [],
+                    );
 
-                setStatus(
-                    enabled
-                        ? "analyzing"
-                        : "paused",
-                );
-            }, 0);
+                    setCurrentDepth(
+                        0,
+                    );
+
+                    setError(
+                        null,
+                    );
+
+                    setStatus(
+                        enabled
+                            ? "analyzing"
+                            : "paused",
+                    );
+                },
+                0,
+            );
 
         if (!enabled) {
-            service
+            void service
                 .stop()
-                .catch(() => {
-                    /*
-                     * Los errores del Worker se gestionan
-                     * en subscribeToErrors().
-                     */
-                });
+                .catch(
+                    () => {
+                        /*
+                         * Si el Worker ha muerto,
+                         * su mecanismo de error
+                         * gestionará la recuperación.
+                         */
+                    },
+                );
 
             return () => {
                 window.clearTimeout(
@@ -286,33 +625,56 @@ export function useStockfish({
             };
         }
 
-        analysisFenRef.current = fen;
+        analysisFenRef.current =
+            fen;
 
-        service
+        void service
             .analyze({
                 fen,
                 depth,
                 multiPv,
             })
+            .then(() => {
+                if (
+                    !mountedRef.current ||
+                    activeAnalysisIdRef.current !==
+                    analysisId
+                ) {
+                    return;
+                }
+
+                /*
+                 * Haber aceptado correctamente
+                 * un análisis demuestra que el
+                 * servicio vuelve a estar sano.
+                 */
+                recoveryAttemptsRef.current =
+                    0;
+
+                setError(
+                    null,
+                );
+            })
             .catch(
-                (analysisError) => {
+                (
+                    analysisError,
+                ) => {
                     if (
+                        !mountedRef.current ||
                         activeAnalysisIdRef.current !==
                         analysisId
                     ) {
                         return;
                     }
 
-                    console.error(
-                        "No se pudo analizar la posición:",
+                    console.warn(
+                        "No se pudo analizar la posición. Intentando recuperar Stockfish...",
                         analysisError,
                     );
 
-                    setError(
-                        "No se pudo analizar la posición.",
+                    void recoverService(
+                        service,
                     );
-
-                    setStatus("error");
                 },
             );
 
@@ -334,6 +696,7 @@ export function useStockfish({
         enabled,
         depth,
         multiPv,
+        recoverService,
     ]);
 
     return {
@@ -341,5 +704,6 @@ export function useStockfish({
         lines,
         currentDepth,
         error,
+        retry,
     };
 }

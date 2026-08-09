@@ -1248,14 +1248,6 @@ textarea,
   text-align: right;
 }
 
-.engine-error {
-  margin: 0;
-  padding: 14px;
-
-  color: #a2443b;
-  font-size: 0.82rem;
-}
-
 /*********************/
 /* Estilos del Toast */
 /*********************/
@@ -2613,4 +2605,65 @@ textarea,
   color: #ffffff;
 
   cursor: pointer;
+}
+
+
+/************************/
+/* Errores de stockfish */
+/************************/
+
+.engine-error-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  min-height: 42px;
+
+  padding: 8px 10px;
+
+  border-radius: 6px;
+
+  background: rgba(180, 70, 70, 0.08);
+}
+
+.engine-error-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.engine-error-content strong {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.engine-error-content span {
+  font-size: 0.72rem;
+
+  opacity: 0.72;
+}
+
+.engine-retry-button {
+  flex-shrink: 0;
+
+  padding: 6px 10px;
+
+  border: 1px solid #667d62;
+  border-radius: 6px;
+
+  background: #ffffff;
+  color: #53684f;
+
+  font-size: 0.74rem;
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+.engine-retry-button:hover {
+  background: #667d62;
+  color: #ffffff;
 }

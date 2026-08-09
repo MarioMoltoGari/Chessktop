@@ -53,7 +53,16 @@ export type StockfishHookOptions = {
 
 export type StockfishHookResult = {
     status: EngineStatus;
+
     lines: EngineLine[];
+
     currentDepth: number;
+
     error: string | null;
+
+    /*
+     * Fuerza una recuperación manual
+     * del motor después de un error.
+     */
+    retry: () => void;
 };
