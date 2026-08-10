@@ -7,6 +7,9 @@ import type {
 import ContextMenu, {
     type ContextMenuItem,
 } from "./library/ContextMenu";
+import {
+    useDialogs,
+} from "../components/dialogs/dialogContext";
 import MoveLibraryItemDialog from "./library/MoveLibraryItemDialog";
 import type {
     Training,
@@ -563,6 +566,11 @@ export default function LibrarySidebar({
     onRenameTraining,
     onDeleteTraining,
 }: LibrarySidebarProps) {
+    const {
+        confirmDialog,
+        promptDialog,
+    } =
+        useDialogs();
     const [search, setSearch] = useState("");
     const [deleteMode, setDeleteMode] = useState(false);
     const [
@@ -621,23 +629,39 @@ export default function LibrarySidebar({
         trainingId: string,
     ) {
         const training =
-            trainings[trainingId];
+            trainings[
+            trainingId
+            ];
 
         if (!training) {
             return;
         }
 
-        const confirmed =
-            window.confirm(
-                `¿Quieres borrar el entrenamiento "${training.name}"?`,
-            );
+        void confirmDialog({
+            title:
+                "Eliminar entrenamiento",
 
-        if (!confirmed) {
-            return;
-        }
+            message:
+                `¿Quieres borrar el entrenamiento "${training.name}"?\n\n` +
+                "Las estadísticas asociadas a este entrenamiento también se eliminarán.",
 
-        onDeleteTraining(
-            trainingId,
+            confirmLabel:
+                "Eliminar",
+
+            destructive:
+                true,
+        }).then(
+            (
+                confirmed,
+            ) => {
+                if (!confirmed) {
+                    return;
+                }
+
+                onDeleteTraining(
+                    trainingId,
+                );
+            },
         );
     }
 
@@ -645,31 +669,46 @@ export default function LibrarySidebar({
         trainingId: string,
     ) {
         const training =
-            trainings[trainingId];
+            trainings[
+            trainingId
+            ];
 
         if (!training) {
             return;
         }
 
-        const name = window.prompt(
-            "Nuevo nombre del entrenamiento:",
-            training.name,
-        );
+        void promptDialog({
+            title:
+                "Renombrar entrenamiento",
 
-        const trimmedName =
-            name?.trim();
+            label:
+                "Nombre del entrenamiento",
 
-        if (
-            !trimmedName ||
-            trimmedName ===
-            training.name
-        ) {
-            return;
-        }
+            initialValue:
+                training.name,
 
-        onRenameTraining(
-            trainingId,
-            trimmedName,
+            confirmLabel:
+                "Guardar",
+        }).then(
+            (
+                name,
+            ) => {
+                const trimmedName =
+                    name?.trim();
+
+                if (
+                    !trimmedName ||
+                    trimmedName ===
+                    training.name
+                ) {
+                    return;
+                }
+
+                onRenameTraining(
+                    trainingId,
+                    trimmedName,
+                );
+            },
         );
     }
 
@@ -756,41 +795,65 @@ export default function LibrarySidebar({
     ) {
         const folder =
             library.folders.find(
-                (item) =>
-                    item.id === folderId,
+                (
+                    item,
+                ) =>
+                    item.id ===
+                    folderId,
             );
 
         if (!folder) {
             return;
         }
 
-        const name = window.prompt(
-            "Nuevo nombre de la carpeta:",
-            folder.name,
+        void promptDialog({
+            title:
+                "Renombrar carpeta",
+
+            label:
+                "Nombre de la carpeta",
+
+            initialValue:
+                folder.name,
+
+            confirmLabel:
+                "Guardar",
+        }).then(
+            (
+                name,
+            ) => {
+                const trimmedName =
+                    name?.trim();
+
+                if (
+                    !trimmedName ||
+                    trimmedName ===
+                    folder.name
+                ) {
+                    return;
+                }
+
+                onLibraryChange({
+                    ...library,
+
+                    folders:
+                        library.folders.map(
+                            (
+                                item,
+                            ) =>
+                                item.id ===
+                                    folderId
+                                    ? {
+                                        ...item,
+
+                                        name:
+                                            trimmedName,
+                                    }
+                                    : item,
+                        ),
+                });
+            },
         );
-
-        const trimmedName = name?.trim();
-
-        if (
-            !trimmedName ||
-            trimmedName === folder.name
-        ) {
-            return;
-        }
-
-        onLibraryChange({
-            ...library,
-
-            folders: library.folders.map(
-                (item) =>
-                    item.id === folderId
-                        ? {
-                            ...item,
-                            name: trimmedName,
-                        }
-                        : item,
-            ),
-        });
     }
 
     function renameStudy(
@@ -798,41 +861,65 @@ export default function LibrarySidebar({
     ) {
         const study =
             library.studies.find(
-                (item) =>
-                    item.id === studyId,
+                (
+                    item,
+                ) =>
+                    item.id ===
+                    studyId,
             );
 
         if (!study) {
             return;
         }
 
-        const name = window.prompt(
-            "Nuevo nombre del estudio:",
-            study.name,
+        void promptDialog({
+            title:
+                "Renombrar estudio",
+
+            label:
+                "Nombre del estudio",
+
+            initialValue:
+                study.name,
+
+            confirmLabel:
+                "Guardar",
+        }).then(
+            (
+                name,
+            ) => {
+                const trimmedName =
+                    name?.trim();
+
+                if (
+                    !trimmedName ||
+                    trimmedName ===
+                    study.name
+                ) {
+                    return;
+                }
+
+                onLibraryChange({
+                    ...library,
+
+                    studies:
+                        library.studies.map(
+                            (
+                                item,
+                            ) =>
+                                item.id ===
+                                    studyId
+                                    ? {
+                                        ...item,
+
+                                        name:
+                                            trimmedName,
+                                    }
+                                    : item,
+                        ),
+                });
+            },
         );
-
-        const trimmedName = name?.trim();
-
-        if (
-            !trimmedName ||
-            trimmedName === study.name
-        ) {
-            return;
-        }
-
-        onLibraryChange({
-            ...library,
-
-            studies: library.studies.map(
-                (item) =>
-                    item.id === studyId
-                        ? {
-                            ...item,
-                            name: trimmedName,
-                        }
-                        : item,
-            ),
-        });
     }
 
     function moveFolder(
@@ -926,129 +1013,211 @@ export default function LibrarySidebar({
     }
 
     function createFolder(
-        parentId: string | null,
+        parentId:
+            string | null,
     ) {
-        const name = window.prompt(
-            parentId
-                ? "Nombre de la subcarpeta:"
-                : "Nombre de la carpeta:",
+        void promptDialog({
+            title:
+                parentId
+                    ? "Nueva subcarpeta"
+                    : "Nueva carpeta",
+
+            label:
+                parentId
+                    ? "Nombre de la subcarpeta"
+                    : "Nombre de la carpeta",
+
+            confirmLabel:
+                "Crear",
+        }).then(
+            (
+                name,
+            ) => {
+                const trimmedName =
+                    name?.trim();
+
+                if (!trimmedName) {
+                    return;
+                }
+
+                const newFolder = {
+                    id:
+                        crypto.randomUUID(),
+
+                    name:
+                        trimmedName,
+
+                    parentId,
+
+                    isExpanded:
+                        true,
+                };
+
+                onLibraryChange({
+                    ...library,
+
+                    folders: [
+                        ...library
+                            .folders,
+
+                        newFolder,
+                    ],
+                });
+            },
         );
-
-        const trimmedName = name?.trim();
-
-        if (!trimmedName) {
-            return;
-        }
-
-        const newFolder = {
-            id: crypto.randomUUID(),
-            name: trimmedName,
-            parentId,
-            isExpanded: true,
-        };
-
-        onLibraryChange({
-            ...library,
-
-            folders: [
-                ...library.folders,
-                newFolder,
-            ],
-        });
     }
 
     function createStudy(
-        folderId: string | null,
+        folderId:
+            string | null,
     ) {
-        const name = window.prompt(
-            "Nombre del estudio:",
+        void promptDialog({
+            title:
+                "Nuevo estudio",
+
+            label:
+                "Nombre del estudio",
+
+            confirmLabel:
+                "Crear",
+        }).then(
+            (
+                name,
+            ) => {
+                const trimmedName =
+                    name?.trim();
+
+                if (!trimmedName) {
+                    return;
+                }
+
+                const newStudy = {
+                    id:
+                        crypto.randomUUID(),
+
+                    name:
+                        trimmedName,
+
+                    folderId,
+                };
+
+                onLibraryChange({
+                    ...library,
+
+                    studies: [
+                        ...library
+                            .studies,
+
+                        newStudy,
+                    ],
+                });
+
+                onStudySelect(
+                    newStudy.id,
+                );
+            },
         );
-
-        const trimmedName = name?.trim();
-
-        if (!trimmedName) {
-            return;
-        }
-
-        const newStudy = {
-            id: crypto.randomUUID(),
-            name: trimmedName,
-            folderId,
-        };
-
-        onLibraryChange({
-            ...library,
-
-            studies: [
-                ...library.studies,
-                newStudy,
-            ],
-        });
-
-        onStudySelect(newStudy.id);
     }
 
-    function deleteStudy(studyId: string) {
-        const studyIndex = library.studies.findIndex(
-            (study) => study.id === studyId,
-        );
+    function deleteStudy(
+        studyId: string,
+    ) {
+        const studyIndex =
+            library.studies.findIndex(
+                (
+                    study,
+                ) =>
+                    study.id ===
+                    studyId,
+            );
 
-        if (studyIndex === -1) {
+        if (
+            studyIndex === -1
+        ) {
             return;
         }
 
-        const study = library.studies[studyIndex];
+        const study =
+            library.studies[
+            studyIndex
+            ];
 
-        const confirmed = window.confirm(
-            `¿Quieres borrar el estudio "${study.name}"?`,
+        void confirmDialog({
+            title:
+                "Eliminar estudio",
+
+            message:
+                `¿Quieres borrar el estudio "${study.name}"?\n\n` +
+                "También se eliminarán sus entrenamientos y estadísticas asociadas.",
+
+            confirmLabel:
+                "Eliminar",
+
+            destructive:
+                true,
+        }).then(
+            (
+                confirmed,
+            ) => {
+                if (!confirmed) {
+                    return;
+                }
+
+                const remainingStudies =
+                    library.studies.filter(
+                        (
+                            item,
+                        ) =>
+                            item.id !==
+                            studyId,
+                    );
+
+                const fallbackStudy =
+                    remainingStudies[
+                    studyIndex
+                    ] ??
+                    remainingStudies[
+                    studyIndex - 1
+                    ] ??
+                    remainingStudies[0] ??
+                    null;
+
+                onLibraryChange({
+                    ...library,
+
+                    studies:
+                        remainingStudies,
+                });
+
+                if (
+                    selectedStudyId ===
+                    studyId
+                ) {
+                    onStudySelect(
+                        fallbackStudy
+                            ?.id ??
+                        null,
+                    );
+                }
+
+                setDeleteMode(
+                    false,
+                );
+            },
         );
-
-        if (!confirmed) {
-            return;
-        }
-
-        const remainingStudies =
-            library.studies.filter(
-                (item) => item.id !== studyId,
-            );
-
-        /*
-         * Elegimos el estudio que ocupará el lugar
-         * del que estamos borrando.
-         *
-         * Prioridad:
-         * 1. El siguiente estudio de la lista.
-         * 2. Si no existe, el anterior.
-         * 3. Si no queda ninguno, null.
-         */
-        const fallbackStudy =
-            remainingStudies[studyIndex] ??
-            remainingStudies[studyIndex - 1] ??
-            remainingStudies[0] ??
-            null;
-
-        onLibraryChange({
-            ...library,
-            studies: remainingStudies,
-        });
-
-        /*
-         * Solo cambiamos la selección si estamos
-         * borrando el estudio activo.
-         */
-        if (selectedStudyId === studyId) {
-            onStudySelect(
-                fallbackStudy?.id ?? null,
-            );
-        }
-
-        setDeleteMode(false);
     }
 
-    function deleteFolder(folderId: string) {
-        const folder = library.folders.find(
-            (item) => item.id === folderId,
-        );
+    function deleteFolder(
+        folderId: string,
+    ) {
+        const folder =
+            library.folders.find(
+                (
+                    item,
+                ) =>
+                    item.id ===
+                    folderId,
+            );
 
         if (!folder) {
             return;
@@ -1060,93 +1229,143 @@ export default function LibrarySidebar({
                 folderId,
             );
 
-        const folderIdSet = new Set(
-            folderIdsToDelete,
-        );
+        const folderIdSet =
+            new Set(
+                folderIdsToDelete,
+            );
 
         const studiesToDelete =
             library.studies.filter(
-                (study) =>
-                    study.folderId !== null &&
-                    folderIdSet.has(study.folderId),
+                (
+                    study,
+                ) =>
+                    study.folderId !==
+                    null &&
+                    folderIdSet.has(
+                        study.folderId,
+                    ),
             );
 
-        const studyIdsToDelete = new Set(
-            studiesToDelete.map(
-                (study) => study.id,
-            ),
-        );
-
-        const confirmed = window.confirm(
-            `¿Quieres borrar la carpeta "${folder.name}"?\n\n` +
-            `También se eliminarán ${folderIdsToDelete.length - 1
-            } subcarpetas y ${studiesToDelete.length
-            } estudios.`,
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
-        const remainingFolders =
-            library.folders.filter(
-                (item) =>
-                    !folderIdSet.has(item.id),
+        const studyIdsToDelete =
+            new Set(
+                studiesToDelete.map(
+                    (
+                        study,
+                    ) =>
+                        study.id,
+                ),
             );
 
-        const remainingStudies =
-            library.studies.filter(
-                (study) =>
-                    !studyIdsToDelete.has(study.id),
-            );
+        void confirmDialog({
+            title:
+                "Eliminar carpeta",
 
-        const selectedStudyWasDeleted =
-            selectedStudyId !== null &&
-            studyIdsToDelete.has(
-                selectedStudyId,
-            );
+            message:
+                `¿Quieres borrar la carpeta "${folder.name}"?\n\n` +
+                `También se eliminarán ${folderIdsToDelete.length - 1} ` +
+                `${folderIdsToDelete.length - 1 === 1
+                    ? "subcarpeta"
+                    : "subcarpetas"
+                } y ${studiesToDelete.length} ` +
+                `${studiesToDelete.length === 1
+                    ? "estudio"
+                    : "estudios"
+                }.`,
 
-        /*
-         * Buscamos una selección alternativa.
-         *
-         * Intentamos conservar aproximadamente
-         * la posición que ocupaba el estudio borrado
-         * dentro de la lista general.
-         */
-        let fallbackStudyId: string | null =
-            selectedStudyId;
+            confirmLabel:
+                "Eliminar",
 
-        if (selectedStudyWasDeleted) {
-            const selectedStudyIndex =
-                library.studies.findIndex(
-                    (study) =>
-                        study.id === selectedStudyId,
+            destructive:
+                true,
+        }).then(
+            (
+                confirmed,
+            ) => {
+                if (!confirmed) {
+                    return;
+                }
+
+                const remainingFolders =
+                    library.folders.filter(
+                        (
+                            item,
+                        ) =>
+                            !folderIdSet.has(
+                                item.id,
+                            ),
+                    );
+
+                const remainingStudies =
+                    library.studies.filter(
+                        (
+                            study,
+                        ) =>
+                            !studyIdsToDelete.has(
+                                study.id,
+                            ),
+                    );
+
+                const selectedStudyWasDeleted =
+                    selectedStudyId !==
+                    null &&
+                    studyIdsToDelete.has(
+                        selectedStudyId,
+                    );
+
+                let fallbackStudyId:
+                    string | null =
+                    selectedStudyId;
+
+                if (
+                    selectedStudyWasDeleted
+                ) {
+                    const selectedStudyIndex =
+                        library.studies.findIndex(
+                            (
+                                study,
+                            ) =>
+                                study.id ===
+                                selectedStudyId,
+                        );
+
+                    const fallbackStudy =
+                        remainingStudies[
+                        selectedStudyIndex
+                        ] ??
+                        remainingStudies[
+                        selectedStudyIndex -
+                        1
+                        ] ??
+                        remainingStudies[0] ??
+                        null;
+
+                    fallbackStudyId =
+                        fallbackStudy
+                            ?.id ??
+                        null;
+                }
+
+                onLibraryChange({
+                    folders:
+                        remainingFolders,
+
+                    studies:
+                        remainingStudies,
+                });
+
+                if (
+                    selectedStudyWasDeleted
+                ) {
+                    onStudySelect(
+                        fallbackStudyId,
+                    );
+                }
+
+                setDeleteMode(
+                    false,
                 );
-
-            const fallbackStudy =
-                remainingStudies[
-                selectedStudyIndex
-                ] ??
-                remainingStudies[
-                selectedStudyIndex - 1
-                ] ??
-                remainingStudies[0] ??
-                null;
-
-            fallbackStudyId =
-                fallbackStudy?.id ?? null;
-        }
-
-        onLibraryChange({
-            folders: remainingFolders,
-            studies: remainingStudies,
-        });
-
-        if (selectedStudyWasDeleted) {
-            onStudySelect(fallbackStudyId);
-        }
-
-        setDeleteMode(false);
+            },
+        );
     }
 
     function openStudy(

@@ -1,6 +1,7 @@
-import type {
-    MouseEvent,
-    ReactNode,
+import {
+    useEffect,
+    type MouseEvent,
+    type ReactNode,
 } from "react";
 
 type ModalProps = {
@@ -20,12 +21,44 @@ export default function Modal({
     onClose,
     footer,
 }: ModalProps) {
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        function handleKeyDown(
+            event: KeyboardEvent,
+        ) {
+            if (
+                event.key === "Escape"
+            ) {
+                onClose();
+            }
+        }
+
+        window.addEventListener(
+            "keydown",
+            handleKeyDown,
+        );
+
+        return () => {
+            window.removeEventListener(
+                "keydown",
+                handleKeyDown,
+            );
+        };
+    }, [
+        open,
+        onClose,
+    ]);
+
     if (!open) {
         return null;
     }
 
     function handleOverlayMouseDown(
-        event: MouseEvent<HTMLDivElement>,
+        event:
+            MouseEvent<HTMLDivElement>,
     ) {
         if (
             event.target ===

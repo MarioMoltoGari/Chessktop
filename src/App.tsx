@@ -19,6 +19,14 @@ import "./App.css";
 import LibrarySidebar from "./components/LibrarySidebar";
 
 import {
+  DialogProvider,
+} from "./components/dialogs/DialogProvider";
+
+import {
+  useDialogs,
+} from "./components/dialogs/dialogContext";
+
+import {
   defaultLibrary,
 } from "./data/defaultLibrary";
 
@@ -874,7 +882,15 @@ const EMPTY_NODES =
 let persistenceWarningShown =
   false;
 
-function App() {
+function AppContent() {
+
+  const {
+    showAlert,
+    confirmDialog,
+    promptDialog,
+  } =
+    useDialogs();
+
   const [
     initialState,
   ] =
@@ -1182,18 +1198,33 @@ function App() {
       result.reason ===
       "quota"
     ) {
-      window.alert(
-        "Chessktop no ha podido guardar los últimos cambios porque el almacenamiento del navegador está lleno.\n\n" +
-        "La última versión guardada correctamente sigue intacta. Te recomendamos exportar una copia de seguridad.",
-      );
+      showAlert({
+        title:
+          "No se han podido guardar los cambios",
+
+        message:
+          "El almacenamiento del navegador está lleno.\n\n" +
+          "La última versión guardada correctamente sigue intacta. Te recomendamos exportar una copia de seguridad.",
+
+        buttonLabel:
+          "Entendido",
+      });
 
       return;
     }
 
-    window.alert(
-      "Chessktop no ha podido guardar los últimos cambios.\n\n" +
-      "La última versión guardada correctamente no se ha sobrescrito.",
-    );
+    showAlert({
+      title:
+        "No se han podido guardar los cambios",
+
+      message:
+        "El almacenamiento del navegador está lleno.\n\n" +
+        "La última versión guardada correctamente sigue intacta. Te recomendamos exportar una copia de seguridad.",
+
+      buttonLabel:
+        "Entendido",
+    });
+
   }, [
     library,
     studyContents,
@@ -1201,6 +1232,7 @@ function App() {
     trainings,
     trainingPerformances,
     persistenceBlocked,
+    showAlert,
   ]);
 
   /*
@@ -1219,14 +1251,18 @@ function App() {
     persistenceWarningShown =
       true;
 
-    window.alert(
-      "Chessktop no ha podido cargar los datos guardados porque parecen estar dañados.\n\n" +
-      "Para protegerlos, Chessktop NO va a sobrescribir el almacenamiento actual.\n\n" +
-      "Puedes restaurar una copia de seguridad válida desde la biblioteca.",
-    );
+    showAlert({
+      title:
+        "Problema con los datos guardados",
+
+      message:
+        "Chessktop no ha podido cargar los datos guardados porque parecen estar dañados.\n\n" +
+        "Para protegerlos, no se sobrescribirá el almacenamiento actual.\n\n" +
+        "Puedes restaurar una copia de seguridad válida desde la biblioteca.",
+    });
   }, [
-    initialState
-      .persistenceBlocked,
+    initialState.persistenceBlocked,
+    showAlert,
   ]);
 
   useEffect(() => {
@@ -1735,12 +1771,6 @@ function App() {
   async function handleImportLibrary(
     file: File,
   ) {
-    /*
-     * Primero leemos y validamos todo.
-     *
-     * Hasta que esto termina correctamente
-     * no tocamos ningún estado.
-     */
     let importedState:
       ChessktopStorage;
 
@@ -1753,8 +1783,7 @@ function App() {
     error
     ) {
       const message =
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "No se pudo importar la biblioteca.";
 
@@ -1763,29 +1792,40 @@ function App() {
         error,
       );
 
-      window.alert(
+      showAlert({
+        title:
+          "No se pudo importar la biblioteca",
+
         message,
-      );
+      });
 
       return;
     }
 
     const confirmed =
-      window.confirm(
-        "La copia seleccionada es válida.\n\n" +
-        "La biblioteca actual será reemplazada completamente.\n\n" +
-        "Las carpetas, estudios, movimientos, notas, entrenamientos y estadísticas que no estén en la copia se perderán.\n\n" +
-        "¿Deseas continuar?",
-      );
+      await confirmDialog({
+        title:
+          "Restaurar copia de seguridad",
+
+        message:
+          "La copia seleccionada es válida.\n\n" +
+          "La biblioteca actual será reemplazada completamente.\n\n" +
+          "Las carpetas, estudios, movimientos, notas, entrenamientos y estadísticas que no estén en la copia se perderán.",
+
+        confirmLabel:
+          "Restaurar biblioteca",
+
+        cancelLabel:
+          "Cancelar",
+
+        destructive:
+          true,
+      });
 
     if (!confirmed) {
       return;
     }
 
-    /*
-     * El backup completo ya ha superado
-     * la validación.
-     */
     setLibrary(
       importedState.library,
     );
@@ -1849,10 +1889,6 @@ function App() {
 
     closeNote();
 
-    /*
-     * Una copia válida recupera Chessktop
-     * del modo de protección.
-     */
     setPersistenceBlocked(
       false,
     );
@@ -1875,18 +1911,26 @@ function App() {
       );
 
     const requestedName =
-      window.prompt(
-        "Nombre del nuevo estudio:",
-        suggestedName,
-      );
+      await promptDialog({
+        title:
+          "Importar PGN",
 
-    const studyName =
-      requestedName
-        ?.trim();
+        label:
+          "Nombre del nuevo estudio",
 
-    if (!studyName) {
+        initialValue:
+          suggestedName,
+
+        confirmLabel:
+          "Importar",
+      });
+
+    if (!requestedName) {
       return;
     }
+
+    const studyName =
+      requestedName.trim();
 
     try {
       const pgnText =
@@ -1957,8 +2001,7 @@ function App() {
     error
     ) {
       const message =
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "No se pudo importar el PGN.";
 
@@ -1967,9 +2010,12 @@ function App() {
         error,
       );
 
-      window.alert(
-        `No se pudo importar el PGN.\n\n${message}`,
-      );
+      showAlert({
+        title:
+          "No se pudo importar el PGN",
+
+        message,
+      });
     }
   }
 
@@ -1977,10 +2023,14 @@ function App() {
     if (
       persistenceBlocked
     ) {
-      window.alert(
-        "Chessktop está en modo de protección porque los datos locales no se pudieron cargar.\n\n" +
-        "Restaura primero una copia de seguridad válida antes de exportar.",
-      );
+      showAlert({
+        title:
+          "Exportación bloqueada",
+
+        message:
+          "Chessktop está en modo de protección porque los datos locales no se pudieron cargar.\n\n" +
+          "Restaura primero una copia de seguridad válida antes de exportar.",
+      });
 
       return;
     }
@@ -2011,12 +2061,15 @@ function App() {
         error,
       );
 
-      window.alert(
-        error instanceof
-          Error
-          ? error.message
-          : "No se pudo exportar la biblioteca.",
-      );
+      showAlert({
+        title:
+          "No se pudo exportar la biblioteca",
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "Se ha producido un error durante la exportación.",
+      });
     }
   }
 
@@ -3226,6 +3279,14 @@ function App() {
         }
       />
     </main>
+  );
+}
+
+function App() {
+  return (
+    <DialogProvider>
+      <AppContent />
+    </DialogProvider>
   );
 }
 
