@@ -446,8 +446,8 @@ function NoteButton({
     <button
       type="button"
       className={`note-button ${hasNote
-          ? "has-note"
-          : ""
+        ? "has-note"
+        : ""
         }`}
       onClick={(
         event,
@@ -592,9 +592,9 @@ function VariationLine({
                     <button
                       type="button"
                       className={`variation-move ${currentNodeId ===
-                          row.whiteMove.id
-                          ? "active"
-                          : ""
+                        row.whiteMove.id
+                        ? "active"
+                        : ""
                         }`}
                       onClick={() =>
                         onMoveClick(
@@ -616,9 +616,9 @@ function VariationLine({
                     <button
                       type="button"
                       className={`variation-move ${currentNodeId ===
-                          row.blackMove.id
-                          ? "active"
-                          : ""
+                        row.blackMove.id
+                        ? "active"
+                        : ""
                         }`}
                       onClick={() =>
                         onMoveClick(
@@ -864,6 +864,15 @@ function loadAppState():
 
 const EMPTY_NODES =
   createInitialNodes();
+
+/*
+ * Evita mostrar dos veces el aviso de
+ * almacenamiento corrupto durante el
+ * doble montaje de React StrictMode
+ * en desarrollo.
+ */
+let persistenceWarningShown =
+  false;
 
 function App() {
   const [
@@ -1201,10 +1210,14 @@ function App() {
   useEffect(() => {
     if (
       !initialState
-        .persistenceBlocked
+        .persistenceBlocked ||
+      persistenceWarningShown
     ) {
       return;
     }
+
+    persistenceWarningShown =
+      true;
 
     window.alert(
       "Chessktop no ha podido cargar los datos guardados porque parecen estar dañados.\n\n" +
@@ -2911,11 +2924,11 @@ function App() {
                             <button
                               type="button"
                               className={`move-button ${currentNodeId ===
-                                  row
-                                    .whiteMove
-                                    .id
-                                  ? "active"
-                                  : ""
+                                row
+                                  .whiteMove
+                                  .id
+                                ? "active"
+                                : ""
                                 }`}
                               onClick={() =>
                                 goToMove(
@@ -2939,11 +2952,11 @@ function App() {
                             <button
                               type="button"
                               className={`move-button ${currentNodeId ===
-                                  row
-                                    .blackMove
-                                    .id
-                                  ? "active"
-                                  : ""
+                                row
+                                  .blackMove
+                                  .id
+                                ? "active"
+                                : ""
                                 }`}
                               onClick={() =>
                                 goToMove(
