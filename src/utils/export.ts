@@ -9,9 +9,20 @@ import {
 export function exportLibrary(
     state: ChessktopStorage,
 ): void {
+    const normalizedState =
+        normalizeChessktopState(
+            state,
+        );
+
+    if (!normalizedState) {
+        throw new Error(
+            "Chessktop ha detectado una inconsistencia en la biblioteca y ha cancelado la exportación para evitar crear una copia dañada.",
+        );
+    }
+
     const json =
         JSON.stringify(
-            state,
+            normalizedState,
             null,
             2,
         );
@@ -30,43 +41,62 @@ export function exportLibrary(
             blob,
         );
 
-    const link =
-        document.createElement(
-            "a",
-        );
-
-    const date =
-        new Date()
-            .toISOString()
-            .slice(
-                0,
-                10,
+    try {
+        const link =
+            document.createElement(
+                "a",
             );
 
-    link.href =
-        url;
+        const date =
+            new Date()
+                .toISOString()
+                .slice(
+                    0,
+                    10,
+                );
 
-    link.download =
-        `chessktop-backup-${date}.json`;
+        link.href =
+            url;
 
-    document.body.appendChild(
-        link,
-    );
+        link.download =
+            `chessktop-backup-${date}.json`;
 
-    link.click();
+        document.body.appendChild(
+            link,
+        );
 
-    link.remove();
+        link.click();
 
-    URL.revokeObjectURL(
-        url,
-    );
+        link.remove();
+    } finally {
+        URL.revokeObjectURL(
+            url,
+        );
+    }
 }
 
 export async function readLibraryBackup(
     file: File,
 ): Promise<ChessktopStorage> {
-    const text =
-        await file.text();
+    let text: string;
+
+    try {
+        text =
+            await file.text();
+    } catch {
+        throw new Error(
+            "No se ha podido leer el archivo seleccionado.",
+        );
+    }
+
+    if (
+        text.trim().length ===
+        0
+    ) {
+        throw new Error(
+            "El archivo seleccionado está vacío.",
+        );
+    }
 
     let parsedData:
         unknown;
@@ -89,7 +119,7 @@ export async function readLibraryBackup(
 
     if (!normalizedState) {
         throw new Error(
-            "El archivo no es una copia válida de Chessktop.",
+            "El archivo no es una copia válida de Chessktop o contiene referencias dañadas.",
         );
     }
 

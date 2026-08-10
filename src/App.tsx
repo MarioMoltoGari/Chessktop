@@ -1,27 +1,55 @@
-import { useEffect, useMemo, useState, useRef } from "react";
-import { Chess, type Square } from "chess.js";
-import { Chessboard } from "react-chessboard";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  Chess,
+  type Square,
+} from "chess.js";
+
+import {
+  Chessboard,
+} from "react-chessboard";
+
 import "./App.css";
+
 import LibrarySidebar from "./components/LibrarySidebar";
-import { defaultLibrary } from "./data/defaultLibrary";
+
+import {
+  defaultLibrary,
+} from "./data/defaultLibrary";
+
 import type {
   StudyContent,
   StudyContentsMap,
 } from "./types";
+
 import type {
   ChessktopStorage,
   LibraryState,
 } from "./types/library";
+
 import {
   createEmptyStudyContent,
 } from "./utils/chessTree";
+
 import {
   loadChessktopState,
   saveChessktopState,
 } from "./utils/storage";
-import { exportLibrary, readLibraryBackup } from "./utils/export";
+
+import {
+  exportLibrary,
+  readLibraryBackup,
+} from "./utils/export";
+
 import StockfishPanel from "./components/engine/StockfishPanel";
+
 import Toast from "./components/Toast";
+
 import type {
   TrainingMode,
   TrainingOrder,
@@ -30,112 +58,179 @@ import type {
   TrainingSide,
   TrainingsMap,
 } from "./components/training/types";
+
 import {
   updateTrainingPerformance,
 } from "./components/training/trainingPerformance";
+
 import {
   addTraining,
   createTraining,
   deleteTraining,
   renameTraining,
 } from "./components/training/trainingService";
+
 import TrainingWorkspace from "./components/training/TrainingWorkspace";
-import type { ActiveWorkspace } from "./types/workspace";
+
+import type {
+  ActiveWorkspace,
+} from "./types/workspace";
+
 import {
   importPgnAsStudy,
 } from "./imports/pgnImporter";
 
 type MoveNode = {
   id: string;
-  parentId: string | null;
 
-  san: string | null;
-  from: Square | null;
-  to: Square | null;
+  parentId:
+  string | null;
+
+  san:
+  string | null;
+
+  from:
+  Square | null;
+
+  to:
+  Square | null;
+
   promotion?: string;
 
   fen: string;
+
   ply: number;
 
   children: string[];
+
   note: string;
 };
 
-type NodesMap = Record<string, MoveNode>;
+type NodesMap =
+  Record<
+    string,
+    MoveNode
+  >;
 
 type VariationLineProps = {
   firstNodeId: string;
+
   nodes: NodesMap;
+
   currentNodeId: string;
-  onMoveClick: (nodeId: string) => void;
-  onNoteClick: (nodeId: string) => void;
+
+  onMoveClick: (
+    nodeId: string,
+  ) => void;
+
+  onNoteClick: (
+    nodeId: string,
+  ) => void;
+
   depth?: number;
 };
 
 type NoteButtonProps = {
   node: MoveNode;
-  onClick: (nodeId: string) => void;
+
+  onClick: (
+    nodeId: string,
+  ) => void;
 };
 
-/**
- * Devuelve la línea principal que comienza en el nodo indicado.
- * El primer hijo de cada nodo se considera continuación principal.
+/*
+ * Devuelve la línea principal que comienza
+ * en el nodo indicado.
  */
 function getLineFromNode(
   nodes: NodesMap,
   firstNodeId: string,
 ): MoveNode[] {
-  const line: MoveNode[] = [];
+  const line:
+    MoveNode[] = [];
 
-  let currentNodeId: string | undefined = firstNodeId;
+  let currentNodeId:
+    string | undefined =
+    firstNodeId;
 
-  while (currentNodeId !== undefined) {
-    const currentMoveNode: MoveNode | undefined =
-      nodes[currentNodeId];
+  while (
+    currentNodeId !==
+    undefined
+  ) {
+    const currentMoveNode:
+      MoveNode | undefined =
+      nodes[
+      currentNodeId
+      ];
 
-    if (currentMoveNode === undefined) {
+    if (
+      currentMoveNode ===
+      undefined
+    ) {
       break;
     }
 
-    line.push(currentMoveNode);
+    line.push(
+      currentMoveNode,
+    );
 
     currentNodeId =
-      currentMoveNode.children.length > 0
-        ? currentMoveNode.children[0]
+      currentMoveNode
+        .children
+        .length > 0
+        ? currentMoveNode
+          .children[0]
         : undefined;
   }
 
   return line;
 }
 
-/**
- * Devuelve la línea principal completa del estudio.
+/*
+ * Devuelve la línea principal
+ * completa del estudio.
  */
-function getMainLine(nodes: NodesMap): MoveNode[] {
-  const firstMoveId = nodes.root.children[0];
+function getMainLine(
+  nodes: NodesMap,
+): MoveNode[] {
+  const firstMoveId =
+    nodes.root
+      .children[0];
 
   if (!firstMoveId) {
     return [];
   }
 
-  return getLineFromNode(nodes, firstMoveId);
+  return getLineFromNode(
+    nodes,
+    firstMoveId,
+  );
 }
 
-/**
- * Genera el prefijo del número de jugada.
+/*
+ * Genera el prefijo del
+ * número de jugada.
  */
 function getMovePrefix(
   node: MoveNode,
-  forceBlackPrefix = false,
+  forceBlackPrefix =
+    false,
 ): string {
-  const moveNumber = Math.ceil(node.ply / 2);
-  const isWhiteMove = node.ply % 2 === 1;
+  const moveNumber =
+    Math.ceil(
+      node.ply / 2,
+    );
+
+  const isWhiteMove =
+    node.ply % 2 === 1;
 
   if (isWhiteMove) {
     return `${moveNumber}.`;
   }
 
-  if (forceBlackPrefix) {
+  if (
+    forceBlackPrefix
+  ) {
     return `${moveNumber}...`;
   }
 
@@ -169,53 +264,85 @@ function getStudyNameFromPgnFile(
   );
 }
 
-/**
- * Convierte el árbol de movimientos a PGN incluyendo variantes.
+/*
+ * Convierte el árbol de movimientos
+ * a PGN incluyendo variantes.
  */
-function createPgn(nodes: NodesMap): string {
+function createPgn(
+  nodes: NodesMap,
+): string {
   function serializePosition(
     positionNodeId: string,
-    isVariationStart: boolean,
+    isVariationStart:
+      boolean,
   ): string {
-    const positionNode = nodes[positionNodeId];
+    const positionNode =
+      nodes[
+      positionNodeId
+      ];
 
-    if (!positionNode || positionNode.children.length === 0) {
+    if (
+      !positionNode ||
+      positionNode
+        .children
+        .length === 0
+    ) {
       return "";
     }
 
-    const [mainMoveId, ...variationIds] =
+    const [
+      mainMoveId,
+      ...variationIds
+    ] =
       positionNode.children;
 
-    const mainMove = nodes[mainMoveId];
+    const mainMove =
+      nodes[
+      mainMoveId
+      ];
 
-    if (!mainMove || !mainMove.san) {
+    if (
+      !mainMove ||
+      !mainMove.san
+    ) {
       return "";
     }
 
-    const prefix = getMovePrefix(
-      mainMove,
-      isVariationStart,
-    );
+    const prefix =
+      getMovePrefix(
+        mainMove,
+        isVariationStart,
+      );
 
-    let result = prefix
-      ? `${prefix} ${mainMove.san}`
-      : mainMove.san;
+    let result =
+      prefix
+        ? `${prefix} ${mainMove.san}`
+        : mainMove.san;
 
-    for (const variationId of variationIds) {
-      const variation = serializeAlternative(variationId);
+    for (
+      const variationId
+      of variationIds
+    ) {
+      const variation =
+        serializeAlternative(
+          variationId,
+        );
 
       if (variation) {
-        result += ` (${variation})`;
+        result +=
+          ` (${variation})`;
       }
     }
 
-    const continuation = serializePosition(
-      mainMove.id,
-      false,
-    );
+    const continuation =
+      serializePosition(
+        mainMove.id,
+        false,
+      );
 
     if (continuation) {
-      result += ` ${continuation}`;
+      result +=
+        ` ${continuation}`;
     }
 
     return result;
@@ -224,43 +351,66 @@ function createPgn(nodes: NodesMap): string {
   function serializeAlternative(
     firstNodeId: string,
   ): string {
-    const firstNode = nodes[firstNodeId];
+    const firstNode =
+      nodes[
+      firstNodeId
+      ];
 
-    if (!firstNode || !firstNode.san) {
+    if (
+      !firstNode ||
+      !firstNode.san
+    ) {
       return "";
     }
 
-    const prefix = getMovePrefix(firstNode, true);
+    const prefix =
+      getMovePrefix(
+        firstNode,
+        true,
+      );
 
-    let result = prefix
-      ? `${prefix} ${firstNode.san}`
-      : firstNode.san;
+    let result =
+      prefix
+        ? `${prefix} ${firstNode.san}`
+        : firstNode.san;
 
-    const continuation = serializePosition(
-      firstNode.id,
-      false,
-    );
+    const continuation =
+      serializePosition(
+        firstNode.id,
+        false,
+      );
 
     if (continuation) {
-      result += ` ${continuation}`;
+      result +=
+        ` ${continuation}`;
     }
 
     return result;
   }
 
-  const moves = serializePosition("root", false);
+  const moves =
+    serializePosition(
+      "root",
+      false,
+    );
 
-  return moves ? `${moves} *` : "";
+  return moves
+    ? `${moves} *`
+    : "";
 }
 
-/**
- * Obtiene todos los nodos pertenecientes a una rama.
+/*
+ * Obtiene todos los nodos
+ * pertenecientes a una rama.
  */
 function getSubtreeNodeIds(
   nodes: NodesMap,
   nodeId: string,
 ): string[] {
-  const node = nodes[nodeId];
+  const node =
+    nodes[
+    nodeId
+    ];
 
   if (!node) {
     return [];
@@ -268,9 +418,18 @@ function getSubtreeNodeIds(
 
   return [
     nodeId,
-    ...node.children.flatMap((childId) =>
-      getSubtreeNodeIds(nodes, childId),
-    ),
+
+    ...node
+      .children
+      .flatMap(
+        (
+          childId,
+        ) =>
+          getSubtreeNodeIds(
+            nodes,
+            childId,
+          ),
+      ),
   ];
 }
 
@@ -278,31 +437,48 @@ function NoteButton({
   node,
   onClick,
 }: NoteButtonProps) {
-  const hasNote = node.note.trim().length > 0;
+  const hasNote =
+    node.note
+      .trim()
+      .length > 0;
 
   return (
     <button
       type="button"
-      className={`note-button ${hasNote ? "has-note" : ""
+      className={`note-button ${hasNote
+          ? "has-note"
+          : ""
         }`}
-      onClick={(event) => {
+      onClick={(
+        event,
+      ) => {
         event.stopPropagation();
-        onClick(node.id);
+
+        onClick(
+          node.id,
+        );
       }}
       aria-label={
         hasNote
           ? `Abrir nota de ${node.san}`
           : `Añadir nota a ${node.san}`
       }
-      title={hasNote ? "Abrir nota" : "Añadir nota"}
+      title={
+        hasNote
+          ? "Abrir nota"
+          : "Añadir nota"
+      }
     >
-      {hasNote ? "📝" : "+"}
+      {hasNote
+        ? "📝"
+        : "+"}
     </button>
   );
 }
 
-/**
- * Representa una variante y sus posibles subvariantes.
+/*
+ * Representa una variante y
+ * sus posibles subvariantes.
  */
 function VariationLine({
   firstNodeId,
@@ -312,32 +488,63 @@ function VariationLine({
   onNoteClick,
   depth = 0,
 }: VariationLineProps) {
-  const line = getLineFromNode(nodes, firstNodeId);
-
-  const rows: {
-    moveNumber: number;
-    whiteMove?: MoveNode;
-    blackMove?: MoveNode;
-  }[] = [];
-
-  for (const node of line) {
-    const moveNumber = Math.ceil(node.ply / 2);
-    const isWhiteMove = node.ply % 2 === 1;
-
-    let row = rows.find(
-      (currentRow) =>
-        currentRow.moveNumber === moveNumber,
+  const line =
+    getLineFromNode(
+      nodes,
+      firstNodeId,
     );
 
+  const rows: {
+    moveNumber:
+    number;
+
+    whiteMove?:
+    MoveNode;
+
+    blackMove?:
+    MoveNode;
+  }[] = [];
+
+  for (
+    const node
+    of line
+  ) {
+    const moveNumber =
+      Math.ceil(
+        node.ply / 2,
+      );
+
+    const isWhiteMove =
+      node.ply % 2 === 1;
+
+    let row =
+      rows.find(
+        (
+          currentRow,
+        ) =>
+          currentRow
+            .moveNumber ===
+          moveNumber,
+      );
+
     if (!row) {
-      row = { moveNumber };
-      rows.push(row);
+      row = {
+        moveNumber,
+      };
+
+      rows.push(
+        row,
+      );
     }
 
-    if (isWhiteMove) {
-      row.whiteMove = node;
+    if (
+      isWhiteMove
+    ) {
+      row.whiteMove =
+        node;
     } else {
-      row.blackMove = node;
+      row.blackMove =
+        node;
     }
   }
 
@@ -345,151 +552,269 @@ function VariationLine({
     <div
       className="variation-block"
       style={{
-        marginLeft: `${Math.min(depth, 4) * 14}px`,
+        marginLeft:
+          `${Math.min(
+            depth,
+            4,
+          ) * 14}px`,
       }}
     >
       <div className="variation-rows">
-        {rows.map((row, index) => {
-          const noteNode =
-            row.blackMove ?? row.whiteMove;
+        {rows.map(
+          (
+            row,
+            index,
+          ) => {
+            const noteNode =
+              row.blackMove ??
+              row.whiteMove;
 
-          const startsWithBlack =
-            index === 0 &&
-            !row.whiteMove &&
-            Boolean(row.blackMove);
+            const startsWithBlack =
+              index === 0 &&
+              !row.whiteMove &&
+              Boolean(
+                row.blackMove,
+              );
 
-          return (
-            <div
-              className="variation-row"
-              key={`${firstNodeId}-${row.moveNumber}`}
-            >
-              <span className="variation-number">
-                {startsWithBlack
-                  ? `${row.moveNumber}...`
-                  : `${row.moveNumber}.`}
-              </span>
+            return (
+              <div
+                className="variation-row"
+                key={`${firstNodeId}-${row.moveNumber}`}
+              >
+                <span className="variation-number">
+                  {startsWithBlack
+                    ? `${row.moveNumber}...`
+                    : `${row.moveNumber}.`}
+                </span>
 
-              <div className="variation-move-slot">
-                {row.whiteMove && (
-                  <button
-                    type="button"
-                    className={`variation-move ${currentNodeId ===
-                      row.whiteMove.id
-                      ? "active"
-                      : ""
-                      }`}
-                    onClick={() =>
-                      onMoveClick(
-                        row.whiteMove!.id,
-                      )
+                <div className="variation-move-slot">
+                  {row.whiteMove && (
+                    <button
+                      type="button"
+                      className={`variation-move ${currentNodeId ===
+                          row.whiteMove.id
+                          ? "active"
+                          : ""
+                        }`}
+                      onClick={() =>
+                        onMoveClick(
+                          row.whiteMove!
+                            .id,
+                        )
+                      }
+                    >
+                      {
+                        row.whiteMove
+                          .san
+                      }
+                    </button>
+                  )}
+                </div>
+
+                <div className="variation-move-slot">
+                  {row.blackMove && (
+                    <button
+                      type="button"
+                      className={`variation-move ${currentNodeId ===
+                          row.blackMove.id
+                          ? "active"
+                          : ""
+                        }`}
+                      onClick={() =>
+                        onMoveClick(
+                          row.blackMove!
+                            .id,
+                        )
+                      }
+                    >
+                      {
+                        row.blackMove
+                          .san
+                      }
+                    </button>
+                  )}
+                </div>
+
+                {noteNode && (
+                  <NoteButton
+                    node={
+                      noteNode
                     }
-                  >
-                    {row.whiteMove.san}
-                  </button>
+                    onClick={
+                      onNoteClick
+                    }
+                  />
                 )}
               </div>
-
-              <div className="variation-move-slot">
-                {row.blackMove && (
-                  <button
-                    type="button"
-                    className={`variation-move ${currentNodeId ===
-                      row.blackMove.id
-                      ? "active"
-                      : ""
-                      }`}
-                    onClick={() =>
-                      onMoveClick(
-                        row.blackMove!.id,
-                      )
-                    }
-                  >
-                    {row.blackMove.san}
-                  </button>
-                )}
-              </div>
-
-              {noteNode && (
-                <NoteButton
-                  node={noteNode}
-                  onClick={onNoteClick}
-                />
-              )}
-            </div>
-          );
-        })}
+            );
+          },
+        )}
       </div>
 
-      {line.map((node) =>
-        node.children
-          .slice(1)
-          .map((variationId) => (
-            <VariationLine
-              key={variationId}
-              firstNodeId={variationId}
-              nodes={nodes}
-              currentNodeId={currentNodeId}
-              onMoveClick={onMoveClick}
-              onNoteClick={onNoteClick}
-              depth={depth + 1}
-            />
-          )),
+      {line.map(
+        (
+          node,
+        ) =>
+          node.children
+            .slice(1)
+            .map(
+              (
+                variationId,
+              ) => (
+                <VariationLine
+                  key={
+                    variationId
+                  }
+                  firstNodeId={
+                    variationId
+                  }
+                  nodes={
+                    nodes
+                  }
+                  currentNodeId={
+                    currentNodeId
+                  }
+                  onMoveClick={
+                    onMoveClick
+                  }
+                  onNoteClick={
+                    onNoteClick
+                  }
+                  depth={
+                    depth + 1
+                  }
+                />
+              ),
+            ),
       )}
     </div>
   );
 }
 
-function createInitialNodes(): NodesMap {
+function createInitialNodes():
+  NodesMap {
   return {
     root: {
       id: "root",
-      parentId: null,
-      san: null,
-      from: null,
-      to: null,
-      fen: new Chess().fen(),
+
+      parentId:
+        null,
+
+      san:
+        null,
+
+      from:
+        null,
+
+      to:
+        null,
+
+      fen:
+        new Chess()
+          .fen(),
+
       ply: 0,
+
       children: [],
+
       note: "",
     },
   };
 }
 
 type InitialAppState = {
-  library: LibraryState;
-  studyContents: StudyContentsMap;
-  workspace: ActiveWorkspace;
-  trainings: TrainingsMap;
-  trainingPerformances: TrainingPerformancesMap;
+  library:
+  LibraryState;
+
+  studyContents:
+  StudyContentsMap;
+
+  workspace:
+  ActiveWorkspace;
+
+  trainings:
+  TrainingsMap;
+
+  trainingPerformances:
+  TrainingPerformancesMap;
+
+  /*
+   * Si existían datos locales pero estaban
+   * dañados, impedimos sobrescribirlos.
+   */
+  persistenceBlocked:
+  boolean;
 };
 
-function loadAppState(): InitialAppState {
-  const storedState = loadChessktopState();
+function loadAppState():
+  InitialAppState {
+  const loadResult =
+    loadChessktopState();
+
+  const storedState =
+    loadResult.status ===
+      "loaded"
+      ? loadResult.state
+      : null;
+
+  /*
+   * empty:
+   * primera ejecución normal.
+   *
+   * invalid / error:
+   * existe almacenamiento que no
+   * queremos sobrescribir.
+   */
+  const persistenceBlocked =
+    loadResult.status ===
+    "invalid" ||
+    loadResult.status ===
+    "error";
+
   const trainings =
-    storedState?.trainings ?? {};
+    storedState
+      ?.trainings ??
+    {};
 
   const trainingPerformances =
-    storedState?.trainingPerformances ??
+    storedState
+      ?.trainingPerformances ??
     {};
 
   const library =
-    storedState?.library ?? defaultLibrary;
+    storedState
+      ?.library ??
+    defaultLibrary;
 
   const storedContents =
-    storedState?.studyContents ?? {};
+    storedState
+      ?.studyContents ??
+    {};
 
   let initialStudyId =
-    storedState?.selectedStudyId ?? null;
+    storedState
+      ?.selectedStudyId ??
+    null;
 
   const selectedStudyExists =
-    initialStudyId !== null &&
+    initialStudyId !==
+    null &&
     library.studies.some(
-      (study) => study.id === initialStudyId,
+      (
+        study,
+      ) =>
+        study.id ===
+        initialStudyId,
     );
 
-  if (!selectedStudyExists) {
+  if (
+    !selectedStudyExists
+  ) {
     initialStudyId =
-      library.studies[0]?.id ?? null;
+      library
+        .studies[0]
+        ?.id ??
+      null;
   }
 
   const studyContents = {
@@ -498,169 +823,303 @@ function loadAppState(): InitialAppState {
 
   if (
     initialStudyId &&
-    !studyContents[initialStudyId]
+    !studyContents[
+    initialStudyId
+    ]
   ) {
-    studyContents[initialStudyId] =
-      createEmptyStudyContent(initialStudyId);
+    studyContents[
+      initialStudyId
+    ] =
+      createEmptyStudyContent(
+        initialStudyId,
+      );
   }
 
-  const workspace: ActiveWorkspace =
+  const workspace:
+    ActiveWorkspace =
     initialStudyId
       ? {
-        type: "study",
-        studyId: initialStudyId,
+        type:
+          "study",
+
+        studyId:
+          initialStudyId,
       }
       : null;
 
   return {
     library,
+
     studyContents,
+
     workspace,
+
     trainings,
+
     trainingPerformances,
+
+    persistenceBlocked,
   };
 }
 
-const EMPTY_NODES = createInitialNodes();
+const EMPTY_NODES =
+  createInitialNodes();
 
 function App() {
-  const [initialState] = useState(
-    loadAppState,
-  );
+  const [
+    initialState,
+  ] =
+    useState(
+      loadAppState,
+    );
 
-  const [library, setLibrary] = useState<LibraryState>(
-    initialState.library,
-  );
+  const [
+    library,
+    setLibrary,
+  ] =
+    useState<LibraryState>(
+      initialState.library,
+    );
 
   const [
     workspace,
     setWorkspace,
-  ] = useState<ActiveWorkspace>(
-    initialState.workspace,
-  );
+  ] =
+    useState<ActiveWorkspace>(
+      initialState.workspace,
+    );
 
   const [
     studyContents,
     setStudyContents,
-  ] = useState<StudyContentsMap>(
-    initialState.studyContents,
-  );
+  ] =
+    useState<StudyContentsMap>(
+      initialState.studyContents,
+    );
 
   const [
     trainings,
     setTrainings,
-  ] = useState<TrainingsMap>(
-    initialState.trainings,
-  );
+  ] =
+    useState<TrainingsMap>(
+      initialState.trainings,
+    );
 
   const [
     trainingPerformances,
     setTrainingPerformances,
   ] =
     useState<TrainingPerformancesMap>(
-      initialState.trainingPerformances,
+      initialState
+        .trainingPerformances,
     );
 
+  const [
+    persistenceBlocked,
+    setPersistenceBlocked,
+  ] =
+    useState(
+      initialState
+        .persistenceBlocked,
+    );
+
+  const saveErrorShownRef =
+    useRef(false);
+
   const selectedTraining =
-    workspace?.type === "training"
-      ? trainings[workspace.trainingId] ?? null
+    workspace?.type ===
+      "training"
+      ? trainings[
+      workspace
+        .trainingId
+      ] ?? null
       : null;
 
   const selectedStudyId =
-    workspace?.type === "study"
+    workspace?.type ===
+      "study"
       ? workspace.studyId
-      : selectedTraining?.studyId ?? null;
+      : selectedTraining
+        ?.studyId ??
+      null;
 
   const trainingStudy =
     selectedTraining
-      ? library.studies.find(
-        (study) =>
-          study.id === selectedTraining.studyId,
-      ) ?? null
+      ? library
+        .studies
+        .find(
+          (
+            study,
+          ) =>
+            study.id ===
+            selectedTraining
+              .studyId,
+        ) ??
+      null
       : null;
 
-  const [pgnCopied, setPgnCopied] =
-    useState(false);
+  const [
+    noteNodeId,
+    setNoteNodeId,
+  ] =
+    useState<
+      string | null
+    >(null);
 
-  const [noteNodeId, setNoteNodeId] =
-    useState<string | null>(null);
-
-  const [noteDraft, setNoteDraft] =
+  const [
+    noteDraft,
+    setNoteDraft,
+  ] =
     useState("");
 
-  const [toastMessage, setToastMessage] =
+  const [
+    toastMessage,
+    setToastMessage,
+  ] =
     useState("");
 
-  const [toastVisible, setToastVisible] =
+  const [
+    toastVisible,
+    setToastVisible,
+  ] =
     useState(false);
 
   const toastTimeoutRef =
-    useRef<number | null>(null);
+    useRef<
+      number | null
+    >(null);
 
   const selectedStudy =
-    library.studies.find(
-      (study) =>
-        study.id === selectedStudyId,
-    ) ?? null;
+    library
+      .studies
+      .find(
+        (
+          study,
+        ) =>
+          study.id ===
+          selectedStudyId,
+      ) ??
+    null;
 
   const activeStudyContent =
     selectedStudyId
-      ? studyContents[selectedStudyId] ?? null
+      ? studyContents[
+      selectedStudyId
+      ] ??
+      null
       : null;
 
   const nodes =
-    activeStudyContent?.nodes ??
+    activeStudyContent
+      ?.nodes ??
     EMPTY_NODES;
 
   const currentNodeId =
-    activeStudyContent?.currentNodeId ??
+    activeStudyContent
+      ?.currentNodeId ??
     "root";
 
   const currentNode =
-    nodes[currentNodeId] ??
+    nodes[
+    currentNodeId
+    ] ??
     nodes.root;
 
-  const position = currentNode.fen;
+  const position =
+    currentNode.fen;
 
-  const game = useMemo(
-    () => new Chess(position),
-    [position],
-  );
+  const game =
+    useMemo(
+      () =>
+        new Chess(
+          position,
+        ),
+      [
+        position,
+      ],
+    );
 
-  const mainLine = useMemo(
-    () => getMainLine(nodes),
-    [nodes],
-  );
+  const mainLine =
+    useMemo(
+      () =>
+        getMainLine(
+          nodes,
+        ),
+      [
+        nodes,
+      ],
+    );
 
-  const pgn = useMemo(
-    () => createPgn(nodes),
-    [nodes],
-  );
+  const pgn =
+    useMemo(
+      () =>
+        createPgn(
+          nodes,
+        ),
+      [
+        nodes,
+      ],
+    );
 
-  const moveRows = useMemo(
-    () =>
-      Array.from(
-        {
-          length: Math.ceil(mainLine.length / 2),
-        },
-        (_, rowIndex) => {
-          const whiteMove =
-            mainLine[rowIndex * 2];
+  const moveRows =
+    useMemo(
+      () =>
+        Array.from(
+          {
+            length:
+              Math.ceil(
+                mainLine.length /
+                2,
+              ),
+          },
+          (
+            _,
+            rowIndex,
+          ) => {
+            const whiteMove =
+              mainLine[
+              rowIndex *
+              2
+              ];
 
-          const blackMove =
-            mainLine[rowIndex * 2 + 1];
+            const blackMove =
+              mainLine[
+              rowIndex *
+              2 +
+              1
+              ];
 
-          return {
-            moveNumber: rowIndex + 1,
-            whiteMove,
-            blackMove,
-          };
-        },
-      ),
-    [mainLine],
-  );
+            return {
+              moveNumber:
+                rowIndex +
+                1,
 
+              whiteMove,
+
+              blackMove,
+            };
+          },
+        ),
+      [
+        mainLine,
+      ],
+    );
+
+  /*
+   * Persistencia automática.
+   */
   useEffect(() => {
+    /*
+     * Si al arrancar encontramos datos
+     * corruptos, no sobrescribimos
+     * absolutamente nada.
+     */
+    if (
+      persistenceBlocked
+    ) {
+      return;
+    }
+
     const stateToSave:
       ChessktopStorage = {
       version: 1,
@@ -676,8 +1135,55 @@ function App() {
       trainingPerformances,
     };
 
-    saveChessktopState(
-      stateToSave,
+    const result =
+      saveChessktopState(
+        stateToSave,
+      );
+
+    if (result.ok) {
+      saveErrorShownRef.current =
+        false;
+
+      return;
+    }
+
+    /*
+     * Evita repetir el mismo alert en cada
+     * modificación mientras continúe
+     * existiendo el problema.
+     */
+    if (
+      saveErrorShownRef.current
+    ) {
+      return;
+    }
+
+    saveErrorShownRef.current =
+      true;
+
+    /*
+     * "reason" únicamente existe en la rama
+     * fallida del resultado.
+     *
+     * Esta comprobación explícita evita
+     * problemas de narrowing de TypeScript.
+     */
+    if (
+      "reason" in result &&
+      result.reason ===
+      "quota"
+    ) {
+      window.alert(
+        "Chessktop no ha podido guardar los últimos cambios porque el almacenamiento del navegador está lleno.\n\n" +
+        "La última versión guardada correctamente sigue intacta. Te recomendamos exportar una copia de seguridad.",
+      );
+
+      return;
+    }
+
+    window.alert(
+      "Chessktop no ha podido guardar los últimos cambios.\n\n" +
+      "La última versión guardada correctamente no se ha sobrescrito.",
     );
   }, [
     library,
@@ -685,13 +1191,40 @@ function App() {
     selectedStudyId,
     trainings,
     trainingPerformances,
+    persistenceBlocked,
+  ]);
+
+  /*
+   * Aviso de recuperación si el estado
+   * local estaba dañado al arrancar.
+   */
+  useEffect(() => {
+    if (
+      !initialState
+        .persistenceBlocked
+    ) {
+      return;
+    }
+
+    window.alert(
+      "Chessktop no ha podido cargar los datos guardados porque parecen estar dañados.\n\n" +
+      "Para protegerlos, Chessktop NO va a sobrescribir el almacenamiento actual.\n\n" +
+      "Puedes restaurar una copia de seguridad válida desde la biblioteca.",
+    );
+  }, [
+    initialState
+      .persistenceBlocked,
   ]);
 
   useEffect(() => {
     return () => {
-      if (toastTimeoutRef.current) {
+      if (
+        toastTimeoutRef
+          .current
+      ) {
         window.clearTimeout(
-          toastTimeoutRef.current,
+          toastTimeoutRef
+            .current,
         );
       }
     };
@@ -701,26 +1234,43 @@ function App() {
     trainingId: string,
   ) {
     const training =
-      trainings[trainingId];
+      trainings[
+      trainingId
+      ];
 
     if (!training) {
       return;
     }
 
     const studyExists =
-      library.studies.some(
-        (study) =>
-          study.id === training.studyId,
-      );
+      library
+        .studies
+        .some(
+          (
+            study,
+          ) =>
+            study.id ===
+            training
+              .studyId,
+        );
 
-    if (!studyExists) {
+    if (
+      !studyExists
+    ) {
       return;
     }
 
-    if (!studyContents[training.studyId]) {
+    if (
+      !studyContents[
+      training.studyId
+      ]
+    ) {
       setStudyContents(
-        (previousContents) => ({
+        (
+          previousContents,
+        ) => ({
           ...previousContents,
+
           [training.studyId]:
             createEmptyStudyContent(
               training.studyId,
@@ -730,7 +1280,9 @@ function App() {
     }
 
     setWorkspace({
-      type: "training",
+      type:
+        "training",
+
       trainingId,
     });
 
@@ -738,7 +1290,8 @@ function App() {
   }
 
   function handleTrainingSessionCompleted(
-    session: TrainingSession,
+    session:
+      TrainingSession,
   ) {
     setTrainingPerformances(
       (
@@ -762,7 +1315,9 @@ function App() {
     name: string,
   ) {
     setTrainings(
-      (previousTrainings) =>
+      (
+        previousTrainings,
+      ) =>
         renameTraining(
           previousTrainings,
           trainingId,
@@ -779,7 +1334,9 @@ function App() {
     trainingId: string,
   ) {
     const training =
-      trainings[trainingId];
+      trainings[
+      trainingId
+      ];
 
     setTrainingPerformances(
       (
@@ -790,7 +1347,9 @@ function App() {
           trainingId
           ]
         ) {
-          return previousPerformances;
+          return (
+            previousPerformances
+          );
         }
 
         const nextPerformances = {
@@ -806,21 +1365,29 @@ function App() {
     );
 
     if (
-      workspace?.type === "training" &&
-      workspace.trainingId === trainingId
+      workspace?.type ===
+      "training" &&
+      workspace.trainingId ===
+      trainingId
     ) {
       setWorkspace(
         training
           ? {
-            type: "study",
-            studyId: training.studyId,
+            type:
+              "study",
+
+            studyId:
+              training
+                .studyId,
           }
           : null,
       );
     }
 
     setTrainings(
-      (previousTrainings) =>
+      (
+        previousTrainings,
+      ) =>
         deleteTraining(
           previousTrainings,
           trainingId,
@@ -835,9 +1402,12 @@ function App() {
   function handleCreateTraining(
     studyId: string,
     name: string,
-    side: TrainingSide,
-    mode: TrainingMode,
-    order: TrainingOrder,
+    side:
+      TrainingSide,
+    mode:
+      TrainingMode,
+    order:
+      TrainingOrder,
   ) {
     const training =
       createTraining({
@@ -849,7 +1419,9 @@ function App() {
       });
 
     setTrainings(
-      (previousTrainings) =>
+      (
+        previousTrainings,
+      ) =>
         addTraining(
           previousTrainings,
           training,
@@ -864,41 +1436,61 @@ function App() {
   }
 
   function handleLibraryChange(
-    nextLibrary: LibraryState,
+    nextLibrary:
+      LibraryState,
   ) {
-    const validStudyIds = new Set(
-      nextLibrary.studies.map(
-        (study) => study.id,
-      ),
+    const validStudyIds =
+      new Set(
+        nextLibrary
+          .studies
+          .map(
+            (
+              study,
+            ) =>
+              study.id,
+          ),
+      );
+
+    setLibrary(
+      nextLibrary,
     );
 
     /*
-     * Actualizamos primero la biblioteca.
-     */
-    setLibrary(nextLibrary);
-
-    /*
-     * Eliminamos el contenido perteneciente
-     * a estudios que ya no existen.
+     * Eliminamos contenidos pertenecientes
+     * a estudios eliminados.
      */
     setStudyContents(
-      (previousContents) => {
+      (
+        previousContents,
+      ) => {
         const cleanedContents:
-          StudyContentsMap = {};
+          StudyContentsMap =
+          {};
 
-        let contentsChanged = false;
+        let contentsChanged =
+          false;
 
-        for (const [
-          studyId,
-          content,
-        ] of Object.entries(
-          previousContents,
-        )) {
-          if (validStudyIds.has(studyId)) {
-            cleanedContents[studyId] =
+        for (
+          const [
+            studyId,
+            content,
+          ]
+          of Object.entries(
+            previousContents,
+          )
+        ) {
+          if (
+            validStudyIds.has(
+              studyId,
+            )
+          ) {
+            cleanedContents[
+              studyId
+            ] =
               content;
           } else {
-            contentsChanged = true;
+            contentsChanged =
+              true;
           }
         }
 
@@ -909,24 +1501,29 @@ function App() {
     );
 
     /*
-     * IMPORTANTE PARA ENTRENAMIENTOS:
-     *
-     * Si desaparece un estudio, también
-     * eliminamos sus entrenamientos asociados.
+     * Si desaparece un estudio,
+     * desaparecen sus entrenamientos.
      */
     setTrainings(
-      (previousTrainings) => {
+      (
+        previousTrainings,
+      ) => {
         const nextTrainings:
-          TrainingsMap = {};
+          TrainingsMap =
+          {};
 
-        let trainingsChanged = false;
+        let trainingsChanged =
+          false;
 
-        for (const [
-          trainingId,
-          training,
-        ] of Object.entries(
-          previousTrainings,
-        )) {
+        for (
+          const [
+            trainingId,
+            training,
+          ]
+          of Object.entries(
+            previousTrainings,
+          )
+        ) {
           if (
             validStudyIds.has(
               training.studyId,
@@ -934,9 +1531,11 @@ function App() {
           ) {
             nextTrainings[
               trainingId
-            ] = training;
+            ] =
+              training;
           } else {
-            trainingsChanged = true;
+            trainingsChanged =
+              true;
           }
         }
 
@@ -952,13 +1551,18 @@ function App() {
           trainings,
         )
           .filter(
-            (training) =>
+            (
+              training,
+            ) =>
               validStudyIds.has(
-                training.studyId,
+                training
+                  .studyId,
               ),
           )
           .map(
-            (training) =>
+            (
+              training,
+            ) =>
               training.id,
           ),
       );
@@ -971,7 +1575,8 @@ function App() {
           TrainingPerformancesMap =
           {};
 
-        let changed = false;
+        let changed =
+          false;
 
         for (
           const [
@@ -989,9 +1594,11 @@ function App() {
           ) {
             nextPerformances[
               trainingId
-            ] = performance;
+            ] =
+              performance;
           } else {
-            changed = true;
+            changed =
+              true;
           }
         }
 
@@ -1002,21 +1609,29 @@ function App() {
     );
 
     /*
-     * Si el workspace apunta a un estudio que ya no
-     * existe, elegimos un estudio de respaldo.
+     * Workspace de estudio eliminado.
      */
     if (
-      workspace?.type === "study" &&
-      !validStudyIds.has(workspace.studyId)
+      workspace?.type ===
+      "study" &&
+      !validStudyIds.has(
+        workspace.studyId,
+      )
     ) {
       const fallbackStudyId =
-        nextLibrary.studies[0]?.id ?? null;
+        nextLibrary
+          .studies[0]
+          ?.id ??
+        null;
 
       setWorkspace(
         fallbackStudyId
           ? {
-            type: "study",
-            studyId: fallbackStudyId,
+            type:
+              "study",
+
+            studyId:
+              fallbackStudyId,
           }
           : null,
       );
@@ -1025,28 +1640,40 @@ function App() {
     }
 
     /*
-     * Si el entrenamiento abierto pertenece a un
-     * estudio eliminado, salimos también de ese
-     * workspace para no dejar referencias inválidas.
+     * Workspace de entrenamiento cuyo
+     * estudio ha desaparecido.
      */
-    if (workspace?.type === "training") {
+    if (
+      workspace?.type ===
+      "training"
+    ) {
       const currentTraining =
-        trainings[workspace.trainingId];
+        trainings[
+        workspace
+          .trainingId
+        ];
 
       if (
         !currentTraining ||
         !validStudyIds.has(
-          currentTraining.studyId,
+          currentTraining
+            .studyId,
         )
       ) {
         const fallbackStudyId =
-          nextLibrary.studies[0]?.id ?? null;
+          nextLibrary
+            .studies[0]
+            ?.id ??
+          null;
 
         setWorkspace(
           fallbackStudyId
             ? {
-              type: "study",
-              studyId: fallbackStudyId,
+              type:
+                "study",
+
+              studyId:
+                fallbackStudyId,
             }
             : null,
         );
@@ -1060,102 +1687,170 @@ function App() {
     message: string,
     duration = 2500,
   ) {
-    setToastMessage(message);
-    setToastVisible(true);
+    setToastMessage(
+      message,
+    );
 
-    if (toastTimeoutRef.current) {
+    setToastVisible(
+      true,
+    );
+
+    if (
+      toastTimeoutRef
+        .current
+    ) {
       window.clearTimeout(
-        toastTimeoutRef.current,
+        toastTimeoutRef
+          .current,
       );
     }
 
     toastTimeoutRef.current =
-      window.setTimeout(() => {
-        setToastVisible(false);
-        toastTimeoutRef.current = null;
-      }, duration);
+      window.setTimeout(
+        () => {
+          setToastVisible(
+            false,
+          );
+
+          toastTimeoutRef.current =
+            null;
+        },
+        duration,
+      );
   }
 
   async function handleImportLibrary(
     file: File,
   ) {
-    const confirmed = window.confirm(
-      "La biblioteca actual será reemplazada completamente por la copia seleccionada.\n\n" +
-      "Las carpetas, estudios, movimientos y notas actuales que no estén en la copia se perderán.\n\n" +
-      "¿Deseas continuar?",
-    );
+    /*
+     * Primero leemos y validamos todo.
+     *
+     * Hasta que esto termina correctamente
+     * no tocamos ningún estado.
+     */
+    let importedState:
+      ChessktopStorage;
+
+    try {
+      importedState =
+        await readLibraryBackup(
+          file,
+        );
+    } catch (
+    error
+    ) {
+      const message =
+        error instanceof
+          Error
+          ? error.message
+          : "No se pudo importar la biblioteca.";
+
+      console.error(
+        "Error al validar la biblioteca:",
+        error,
+      );
+
+      window.alert(
+        message,
+      );
+
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "La copia seleccionada es válida.\n\n" +
+        "La biblioteca actual será reemplazada completamente.\n\n" +
+        "Las carpetas, estudios, movimientos, notas, entrenamientos y estadísticas que no estén en la copia se perderán.\n\n" +
+        "¿Deseas continuar?",
+      );
 
     if (!confirmed) {
       return;
     }
 
-    try {
-      const importedState =
-        await readLibraryBackup(file);
+    /*
+     * El backup completo ya ha superado
+     * la validación.
+     */
+    setLibrary(
+      importedState.library,
+    );
 
-      setLibrary(
-        importedState.library,
-      );
+    setStudyContents(
+      importedState.studyContents,
+    );
 
-      setStudyContents(
-        importedState.studyContents,
-      );
+    setTrainings(
+      importedState.trainings,
+    );
 
-      setTrainings(
-        importedState.trainings ?? {},
-      );
+    setTrainingPerformances(
+      importedState
+        .trainingPerformances,
+    );
 
-      setTrainingPerformances(
-        importedState
-          .trainingPerformances ??
-        {},
-      );
+    const importedStudyId =
+      importedState
+        .selectedStudyId;
 
-      const importedStudyId =
-        importedState.selectedStudyId;
-
-      const importedStudyExists =
-        importedStudyId !== null &&
-        importedState.library.studies.some(
-          (study) =>
-            study.id === importedStudyId,
+    const importedStudyExists =
+      importedStudyId !==
+      null &&
+      importedState
+        .library
+        .studies
+        .some(
+          (
+            study,
+          ) =>
+            study.id ===
+            importedStudyId,
         );
 
-      setWorkspace(
-        importedStudyExists &&
-          importedStudyId
+    setWorkspace(
+      importedStudyExists &&
+        importedStudyId
+        ? {
+          type:
+            "study",
+
+          studyId:
+            importedStudyId,
+        }
+        : importedState
+          .library
+          .studies[0]
           ? {
-            type: "study",
-            studyId: importedStudyId,
+            type:
+              "study",
+
+            studyId:
+              importedState
+                .library
+                .studies[0]
+                .id,
           }
-          : importedState.library.studies[0]
-            ? {
-              type: "study",
-              studyId:
-                importedState.library.studies[0].id,
-            }
-            : null,
-      );
+          : null,
+    );
 
-      closeNote();
-      setPgnCopied(false);
+    closeNote();
 
-      alert(
-        "La biblioteca se ha importado correctamente.",
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "No se pudo importar la biblioteca.";
+    /*
+     * Una copia válida recupera Chessktop
+     * del modo de protección.
+     */
+    setPersistenceBlocked(
+      false,
+    );
 
-      console.error(
-        "Error al importar la biblioteca:",
-        error,
-      );
+    saveErrorShownRef.current =
+      false;
 
-      alert(message);
-    }
+    showToast(
+      "Biblioteca restaurada correctamente.",
+      3500,
+    );
   }
 
   async function handleImportPgn(
@@ -1173,7 +1868,8 @@ function App() {
       );
 
     const studyName =
-      requestedName?.trim();
+      requestedName
+        ?.trim();
 
     if (!studyName) {
       return;
@@ -1195,7 +1891,8 @@ function App() {
         );
 
       const newStudy = {
-        id: studyId,
+        id:
+          studyId,
 
         name:
           studyName,
@@ -1204,10 +1901,6 @@ function App() {
           null,
       };
 
-      /*
-       * La importación PGN siempre crea
-       * un estudio nuevo.
-       */
       setLibrary(
         (
           previousLibrary,
@@ -1215,16 +1908,14 @@ function App() {
           ...previousLibrary,
 
           studies: [
-            ...previousLibrary.studies,
+            ...previousLibrary
+              .studies,
+
             newStudy,
           ],
         }),
       );
 
-      /*
-       * Insertamos directamente el árbol
-       * importado como contenido del estudio.
-       */
       setStudyContents(
         (
           previousContents,
@@ -1236,28 +1927,25 @@ function App() {
         }),
       );
 
-      /*
-       * Abrimos automáticamente el estudio
-       * recién creado.
-       */
       setWorkspace({
-        type: "study",
+        type:
+          "study",
+
         studyId,
       });
 
       closeNote();
 
-      setPgnCopied(
-        false,
-      );
-
       showToast(
         `PGN importado como "${studyName}".`,
         3500,
       );
-    } catch (error) {
+    } catch (
+    error
+    ) {
       const message =
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "No se pudo importar el PGN.";
 
@@ -1266,45 +1954,101 @@ function App() {
         error,
       );
 
-      alert(
+      window.alert(
         `No se pudo importar el PGN.\n\n${message}`,
       );
     }
   }
 
   function handleExportLibrary() {
-    exportLibrary({
-      version: 1,
-      library,
-      studyContents,
-      selectedStudyId,
-      trainings,
-      trainingPerformances,
-    });
+    if (
+      persistenceBlocked
+    ) {
+      window.alert(
+        "Chessktop está en modo de protección porque los datos locales no se pudieron cargar.\n\n" +
+        "Restaura primero una copia de seguridad válida antes de exportar.",
+      );
+
+      return;
+    }
+
+    try {
+      exportLibrary({
+        version: 1,
+
+        library,
+
+        studyContents,
+
+        selectedStudyId,
+
+        trainings,
+
+        trainingPerformances,
+      });
+
+      showToast(
+        "Copia de seguridad exportada.",
+      );
+    } catch (
+    error
+    ) {
+      console.error(
+        "No se pudo exportar la biblioteca:",
+        error,
+      );
+
+      window.alert(
+        error instanceof
+          Error
+          ? error.message
+          : "No se pudo exportar la biblioteca.",
+      );
+    }
   }
 
   function selectStudy(
-    nextStudyId: string | null,
+    nextStudyId:
+      string | null,
   ) {
-    if (!nextStudyId) {
-      setWorkspace(null);
+    if (
+      !nextStudyId
+    ) {
+      setWorkspace(
+        null,
+      );
+
       closeNote();
+
       return;
     }
 
     const studyExists =
-      library.studies.some(
-        (study) =>
-          study.id === nextStudyId,
-      );
+      library
+        .studies
+        .some(
+          (
+            study,
+          ) =>
+            study.id ===
+            nextStudyId,
+        );
 
-    if (!studyExists) {
+    if (
+      !studyExists
+    ) {
       return;
     }
 
-    if (!studyContents[nextStudyId]) {
+    if (
+      !studyContents[
+      nextStudyId
+      ]
+    ) {
       setStudyContents(
-        (previousContents) => ({
+        (
+          previousContents,
+        ) => ({
           ...previousContents,
 
           [nextStudyId]:
@@ -1316,40 +2060,36 @@ function App() {
     }
 
     setWorkspace({
-      type: "study",
-      studyId: nextStudyId,
+      type:
+        "study",
+
+      studyId:
+        nextStudyId,
     });
 
     closeNote();
   }
 
-  useEffect(() => {
-    if (!pgnCopied) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setPgnCopied(false);
-    }, 1500);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [pgnCopied]);
-
   function updateActiveStudy(
     updater: (
-      content: StudyContent,
+      content:
+        StudyContent,
     ) => StudyContent,
   ) {
-    if (!selectedStudyId) {
+    if (
+      !selectedStudyId
+    ) {
       return;
     }
 
     setStudyContents(
-      (previousContents) => {
+      (
+        previousContents,
+      ) => {
         const currentContent =
-          previousContents[selectedStudyId] ??
+          previousContents[
+          selectedStudyId
+          ] ??
           createEmptyStudyContent(
             selectedStudyId,
           );
@@ -1358,12 +2098,16 @@ function App() {
           ...previousContents,
 
           [selectedStudyId]: {
-            ...updater(currentContent),
+            ...updater(
+              currentContent,
+            ),
 
-            studyId: selectedStudyId,
+            studyId:
+              selectedStudyId,
 
             updatedAt:
-              new Date().toISOString(),
+              new Date()
+                .toISOString(),
           },
         };
       },
@@ -1373,48 +2117,81 @@ function App() {
   function setActiveNodeId(
     nodeId: string,
   ) {
-    updateActiveStudy((content) => ({
-      ...content,
-      currentNodeId: nodeId,
-    }));
+    updateActiveStudy(
+      (
+        content,
+      ) => ({
+        ...content,
+
+        currentNodeId:
+          nodeId,
+      }),
+    );
   }
 
-  function openNote(nodeId: string) {
-    const node = nodes[nodeId];
+  function openNote(
+    nodeId: string,
+  ) {
+    const node =
+      nodes[
+      nodeId
+      ];
 
     if (!node) {
       return;
     }
 
-    setNoteNodeId(nodeId);
-    setNoteDraft(node.note);
+    setNoteNodeId(
+      nodeId,
+    );
+
+    setNoteDraft(
+      node.note,
+    );
   }
 
   function closeNote() {
-    setNoteNodeId(null);
-    setNoteDraft("");
+    setNoteNodeId(
+      null,
+    );
+
+    setNoteDraft(
+      "",
+    );
   }
 
   function saveNote() {
     if (
       !noteNodeId ||
-      !nodes[noteNodeId]
+      !nodes[
+      noteNodeId
+      ]
     ) {
       return;
     }
 
-    updateActiveStudy((content) => ({
-      ...content,
+    updateActiveStudy(
+      (
+        content,
+      ) => ({
+        ...content,
 
-      nodes: {
-        ...content.nodes,
+        nodes: {
+          ...content.nodes,
 
-        [noteNodeId]: {
-          ...content.nodes[noteNodeId],
-          note: noteDraft.trim(),
+          [noteNodeId]: {
+            ...content
+              .nodes[
+            noteNodeId
+            ],
+
+            note:
+              noteDraft
+                .trim(),
+          },
         },
-      },
-    }));
+      }),
+    );
 
     closeNote();
   }
@@ -1422,121 +2199,190 @@ function App() {
   function deleteNote() {
     if (
       !noteNodeId ||
-      !nodes[noteNodeId]
+      !nodes[
+      noteNodeId
+      ]
     ) {
       return;
     }
 
-    updateActiveStudy((content) => ({
-      ...content,
+    updateActiveStudy(
+      (
+        content,
+      ) => ({
+        ...content,
 
-      nodes: {
-        ...content.nodes,
+        nodes: {
+          ...content.nodes,
 
-        [noteNodeId]: {
-          ...content.nodes[noteNodeId],
-          note: "",
+          [noteNodeId]: {
+            ...content
+              .nodes[
+            noteNodeId
+            ],
+
+            note: "",
+          },
         },
-      },
-    }));
+      }),
+    );
 
     closeNote();
   }
 
   function makeMove(
-    sourceSquare: string,
-    targetSquare: string,
+    sourceSquare:
+      string,
+    targetSquare:
+      string,
   ): boolean {
-    if (!selectedStudyId) {
+    if (
+      !selectedStudyId
+    ) {
       return false;
     }
 
     const nodeAtCurrentPosition =
-      nodes[currentNodeId];
+      nodes[
+      currentNodeId
+      ];
 
-    if (!nodeAtCurrentPosition) {
+    if (
+      !nodeAtCurrentPosition
+    ) {
       return false;
     }
 
-    const gameCopy = new Chess(
-      nodeAtCurrentPosition.fen,
-    );
+    const gameCopy =
+      new Chess(
+        nodeAtCurrentPosition
+          .fen,
+      );
 
     try {
-      const move = gameCopy.move({
-        from: sourceSquare as Square,
-        to: targetSquare as Square,
-        promotion: "q",
-      });
+      const move =
+        gameCopy.move({
+          from:
+            sourceSquare as
+            Square,
+
+          to:
+            targetSquare as
+            Square,
+
+          promotion:
+            "q",
+        });
 
       const existingChildId =
-        nodeAtCurrentPosition.children.find(
-          (childId) => {
-            const child = nodes[childId];
+        nodeAtCurrentPosition
+          .children
+          .find(
+            (
+              childId,
+            ) => {
+              const child =
+                nodes[
+                childId
+                ];
 
-            if (!child) {
-              return false;
-            }
+              if (
+                !child
+              ) {
+                return false;
+              }
 
-            return (
-              child.from === move.from &&
-              child.to === move.to &&
-              child.promotion ===
-              move.promotion
-            );
-          },
+              return (
+                child.from ===
+                move.from &&
+                child.to ===
+                move.to &&
+                child.promotion ===
+                move.promotion
+              );
+            },
+          );
+
+      if (
+        existingChildId
+      ) {
+        setActiveNodeId(
+          existingChildId,
         );
 
-      if (existingChildId) {
-        setActiveNodeId(existingChildId);
         return true;
       }
 
       const newNodeId =
         crypto.randomUUID();
 
-      const newNode: MoveNode = {
-        id: newNodeId,
-        parentId: currentNodeId,
+      const newNode:
+        MoveNode = {
+        id:
+          newNodeId,
 
-        san: move.san,
-        from: move.from,
-        to: move.to,
-        promotion: move.promotion,
+        parentId:
+          currentNodeId,
 
-        fen: gameCopy.fen(),
+        san:
+          move.san,
+
+        from:
+          move.from,
+
+        to:
+          move.to,
+
+        promotion:
+          move.promotion,
+
+        fen:
+          gameCopy.fen(),
+
         ply:
-          nodeAtCurrentPosition.ply + 1,
+          nodeAtCurrentPosition
+            .ply +
+          1,
 
         children: [],
+
         note: "",
       };
 
-      updateActiveStudy((content) => ({
-        ...content,
+      updateActiveStudy(
+        (
+          content,
+        ) => ({
+          ...content,
 
-        nodes: {
-          ...content.nodes,
+          nodes: {
+            ...content.nodes,
 
-          [currentNodeId]: {
-            ...content.nodes[
-            currentNodeId
-            ],
+            [currentNodeId]: {
+              ...content
+                .nodes[
+              currentNodeId
+              ],
 
-            children: [
-              ...content.nodes[
-                currentNodeId
-              ].children,
+              children: [
+                ...content
+                  .nodes[
+                  currentNodeId
+                ]
+                  .children,
 
-              newNodeId,
-            ],
+                newNodeId,
+              ],
+            },
+
+            [newNodeId]:
+              newNode,
           },
 
-          [newNodeId]: newNode,
-        },
-
-        currentNodeId: newNodeId,
-      }));
+          currentNodeId:
+            newNodeId,
+        }),
+      );
 
       return true;
     } catch {
@@ -1544,44 +2390,75 @@ function App() {
     }
   }
 
-  function goToMove(nodeId: string) {
-    if (nodes[nodeId]) {
-      setActiveNodeId(nodeId);
+  function goToMove(
+    nodeId: string,
+  ) {
+    if (
+      nodes[
+      nodeId
+      ]
+    ) {
+      setActiveNodeId(
+        nodeId,
+      );
     }
   }
 
   function goToStart() {
-    setActiveNodeId("root");
+    setActiveNodeId(
+      "root",
+    );
   }
 
   function goToPreviousMove() {
     const parentId =
-      nodes[currentNodeId]?.parentId;
+      nodes[
+        currentNodeId
+      ]?.parentId;
 
-    if (parentId !== null && parentId !== undefined) {
-      setActiveNodeId(parentId);
+    if (
+      parentId !==
+      null &&
+      parentId !==
+      undefined
+    ) {
+      setActiveNodeId(
+        parentId,
+      );
     }
   }
 
   function goToNextMove() {
     const firstChildId =
-      nodes[currentNodeId]?.children[0];
+      nodes[
+        currentNodeId
+      ]?.children[0];
 
-    if (firstChildId) {
-      setActiveNodeId(firstChildId);
+    if (
+      firstChildId
+    ) {
+      setActiveNodeId(
+        firstChildId,
+      );
     }
   }
 
   function deleteCurrentBranch() {
-    if (currentNodeId === "root") {
+    if (
+      currentNodeId ===
+      "root"
+    ) {
       return;
     }
 
     const nodeToDelete =
-      nodes[currentNodeId];
+      nodes[
+      currentNodeId
+      ];
 
     const parentId =
-      nodeToDelete?.parentId;
+      nodeToDelete
+        ?.parentId;
 
     if (!parentId) {
       return;
@@ -1593,47 +2470,85 @@ function App() {
         currentNodeId,
       );
 
-    updateActiveStudy((content) => {
-      const updatedNodes = {
-        ...content.nodes,
-      };
+    updateActiveStudy(
+      (
+        content,
+      ) => {
+        const updatedNodes = {
+          ...content.nodes,
+        };
 
-      for (const nodeId of subtreeIds) {
-        delete updatedNodes[nodeId];
-      }
+        for (
+          const nodeId
+          of subtreeIds
+        ) {
+          delete updatedNodes[
+            nodeId
+          ];
+        }
 
-      updatedNodes[parentId] = {
-        ...updatedNodes[parentId],
-
-        children:
+        const parent =
           updatedNodes[
-            parentId
-          ].children.filter(
-            (childId) =>
-              childId !== currentNodeId,
-          ),
-      };
+          parentId
+          ];
 
-      return {
-        ...content,
-        nodes: updatedNodes,
-        currentNodeId: parentId,
-      };
-    });
+        if (!parent) {
+          return content;
+        }
+
+        updatedNodes[
+          parentId
+        ] = {
+          ...parent,
+
+          children:
+            parent
+              .children
+              .filter(
+                (
+                  childId,
+                ) =>
+                  childId !==
+                  currentNodeId,
+              ),
+        };
+
+        return {
+          ...content,
+
+          nodes:
+            updatedNodes,
+
+          currentNodeId:
+            parentId,
+        };
+      },
+    );
+
+    closeNote();
   }
 
   function resetGame() {
-    if (!selectedStudyId) {
+    if (
+      !selectedStudyId
+    ) {
       return;
     }
 
-    updateActiveStudy((content) => ({
-      ...content,
-      nodes: createInitialNodes(),
-      currentNodeId: "root",
-    }));
+    updateActiveStudy(
+      (
+        content,
+      ) => ({
+        ...content,
 
-    setPgnCopied(false);
+        nodes:
+          createInitialNodes(),
+
+        currentNodeId:
+          "root",
+      }),
+    );
+
     closeNote();
   }
 
@@ -1647,7 +2562,9 @@ function App() {
 
     const blob =
       new Blob(
-        [pgn],
+        [
+          pgn,
+        ],
         {
           type:
             "application/x-chess-pgn;charset=utf-8",
@@ -1665,7 +2582,8 @@ function App() {
       );
 
     const safeStudyName =
-      selectedStudy.name
+      selectedStudy
+        .name
         .trim()
         .replace(
           /[<>:"/\\|?*]+/g,
@@ -1687,6 +2605,7 @@ function App() {
     );
 
     link.click();
+
     link.remove();
 
     URL.revokeObjectURL(
@@ -1702,10 +2621,14 @@ function App() {
     <main className="app">
       <header className="app-header">
         <div>
-          <h1>Chessktop</h1>
+          <h1>
+            Chessktop
+          </h1>
+
           <p>
             {selectedStudy
-              ? selectedStudy.name
+              ? selectedStudy
+                .name
               : "Selecciona un estudio"}
           </p>
         </div>
@@ -1713,60 +2636,110 @@ function App() {
 
       <section className="workspace">
         <LibrarySidebar
-          library={library}
-          trainings={trainings}
-          trainingPerformances={trainingPerformances}
-          selectedStudyId={selectedStudyId}
-          onLibraryChange={handleLibraryChange}
-          onStudySelect={selectStudy}
-          onExportLibrary={handleExportLibrary}
-          onImportLibrary={handleImportLibrary}
-          onCreateTraining={handleCreateTraining}
-          onOpenTraining={openTraining}
-          onRenameTraining={handleRenameTraining}
-          onDeleteTraining={handleDeleteTraining}
-          onImportPgn={handleImportPgn}
-          onExportPgn={handleExportPgn}
+          library={
+            library
+          }
+          trainings={
+            trainings
+          }
+          trainingPerformances={
+            trainingPerformances
+          }
+          selectedStudyId={
+            selectedStudyId
+          }
+          onLibraryChange={
+            handleLibraryChange
+          }
+          onStudySelect={
+            selectStudy
+          }
+          onExportLibrary={
+            handleExportLibrary
+          }
+          onImportLibrary={
+            handleImportLibrary
+          }
+          onCreateTraining={
+            handleCreateTraining
+          }
+          onOpenTraining={
+            openTraining
+          }
+          onRenameTraining={
+            handleRenameTraining
+          }
+          onDeleteTraining={
+            handleDeleteTraining
+          }
+          onImportPgn={
+            handleImportPgn
+          }
+          onExportPgn={
+            handleExportPgn
+          }
         />
-        {workspace?.type === "training" &&
+
+        {workspace?.type ===
+          "training" &&
           selectedTraining &&
           trainingStudy &&
           studyContents[
-          selectedTraining.studyId
+          selectedTraining
+            .studyId
           ] ? (
           <TrainingWorkspace
-            key={selectedTraining.id}
-            training={selectedTraining}
-            studyName={trainingStudy.name}
+            key={
+              selectedTraining
+                .id
+            }
+            training={
+              selectedTraining
+            }
+            studyName={
+              trainingStudy
+                .name
+            }
             onClose={() =>
               setWorkspace({
-                type: "study",
+                type:
+                  "study",
+
                 studyId:
-                  selectedTraining.studyId,
+                  selectedTraining
+                    .studyId,
               })
             }
             studyContent={
               studyContents[
-              selectedTraining.studyId
+              selectedTraining
+                .studyId
               ]
             }
             onAddNote={
               openNote
             }
-            onSessionCompleted={handleTrainingSessionCompleted}
+            onSessionCompleted={
+              handleTrainingSessionCompleted
+            }
           />
         ) : (
           <>
             <div className="board-section">
               <div className="board-section">
                 <StockfishPanel
-                  fen={position}
+                  fen={
+                    position
+                  }
                   hasActiveStudy={
-                    selectedStudyId !== null
+                    selectedStudyId !==
+                    null
                   }
                 />
+
                 {/* controles */}
               </div>
+
               <div className="board-container">
                 <Chessboard
                   options={{
@@ -1784,6 +2757,7 @@ function App() {
                           "Selecciona o crea un estudio para utilizar el tablero.",
                           3000,
                         );
+
                         return false;
                       }
 
@@ -1794,17 +2768,21 @@ function App() {
                     },
 
                     boardStyle: {
-                      borderRadius: "8px",
+                      borderRadius:
+                        "8px",
+
                       boxShadow:
                         "0 8px 24px rgba(0, 0, 0, 0.16)",
                     },
 
                     lightSquareStyle: {
-                      backgroundColor: "#e8e1d1",
+                      backgroundColor:
+                        "#e8e1d1",
                     },
 
                     darkSquareStyle: {
-                      backgroundColor: "#77906f",
+                      backgroundColor:
+                        "#77906f",
                     },
                   }}
                 />
@@ -1813,26 +2791,41 @@ function App() {
               <div className="board-controls">
                 <button
                   type="button"
-                  onClick={goToStart}
-                  disabled={currentNodeId === "root"}
+                  onClick={
+                    goToStart
+                  }
+                  disabled={
+                    currentNodeId ===
+                    "root"
+                  }
                 >
                   Inicio
                 </button>
 
                 <button
                   type="button"
-                  onClick={goToPreviousMove}
-                  disabled={currentNodeId === "root"}
+                  onClick={
+                    goToPreviousMove
+                  }
+                  disabled={
+                    currentNodeId ===
+                    "root"
+                  }
                 >
                   Anterior
                 </button>
 
                 <button
                   type="button"
-                  onClick={goToNextMove}
+                  onClick={
+                    goToNextMove
+                  }
                   disabled={
-                    nodes[currentNodeId]?.children
-                      .length === 0
+                    nodes[
+                      currentNodeId
+                    ]?.children
+                      .length ===
+                    0
                   }
                 >
                   Siguiente
@@ -1840,17 +2833,27 @@ function App() {
 
                 <button
                   type="button"
-                  onClick={deleteCurrentBranch}
-                  disabled={currentNodeId === "root"}
+                  onClick={
+                    deleteCurrentBranch
+                  }
+                  disabled={
+                    currentNodeId ===
+                    "root"
+                  }
                 >
                   Borrar rama
                 </button>
 
                 <button
                   type="button"
-                  onClick={resetGame}
+                  onClick={
+                    resetGame
+                  }
                   disabled={
-                    nodes.root.children.length === 0
+                    nodes.root
+                      .children
+                      .length ===
+                    0
                   }
                 >
                   Reiniciar
@@ -1859,107 +2862,195 @@ function App() {
             </div>
 
             <aside className="moves-panel">
-              <h2>Movimientos</h2>
+              <h2>
+                Movimientos
+              </h2>
 
               <div className="moves-table-header">
-                <span>N.º</span>
-                <span>Blancas</span>
-                <span>Negras</span>
+                <span>
+                  N.º
+                </span>
+
+                <span>
+                  Blancas
+                </span>
+
+                <span>
+                  Negras
+                </span>
+
                 <span aria-label="Notas" />
               </div>
 
-              {moveRows.length === 0 ? (
+              {moveRows.length ===
+                0 ? (
                 <p className="empty-message">
                   Todavía no hay movimientos.
                 </p>
               ) : (
                 <div className="moves-table">
-                  {moveRows.map((row) => (
-                    <div
-                      className="move-group"
-                      key={row.moveNumber}
-                    >
-                      <div className="move-row">
-                        <span className="move-number">
-                          {row.moveNumber}.
-                        </span>
-
-                        {row.whiteMove ? (
-                          <button
-                            type="button"
-                            className={`move-button ${currentNodeId === row.whiteMove.id
-                              ? "active"
-                              : ""
-                              }`}
-                            onClick={() =>
-                              goToMove(row.whiteMove.id)
+                  {moveRows.map(
+                    (
+                      row,
+                    ) => (
+                      <div
+                        className="move-group"
+                        key={
+                          row.moveNumber
+                        }
+                      >
+                        <div className="move-row">
+                          <span className="move-number">
+                            {
+                              row.moveNumber
                             }
-                          >
-                            {row.whiteMove.san}
-                          </button>
-                        ) : (
-                          <span />
-                        )}
+                            .
+                          </span>
 
-                        {row.blackMove ? (
-                          <button
-                            type="button"
-                            className={`move-button ${currentNodeId === row.blackMove.id
-                              ? "active"
-                              : ""
-                              }`}
-                            onClick={() =>
-                              goToMove(row.blackMove.id)
+                          {row.whiteMove ? (
+                            <button
+                              type="button"
+                              className={`move-button ${currentNodeId ===
+                                  row
+                                    .whiteMove
+                                    .id
+                                  ? "active"
+                                  : ""
+                                }`}
+                              onClick={() =>
+                                goToMove(
+                                  row
+                                    .whiteMove!
+                                    .id,
+                                )
+                              }
+                            >
+                              {
+                                row
+                                  .whiteMove
+                                  .san
+                              }
+                            </button>
+                          ) : (
+                            <span />
+                          )}
+
+                          {row.blackMove ? (
+                            <button
+                              type="button"
+                              className={`move-button ${currentNodeId ===
+                                  row
+                                    .blackMove
+                                    .id
+                                  ? "active"
+                                  : ""
+                                }`}
+                              onClick={() =>
+                                goToMove(
+                                  row
+                                    .blackMove!
+                                    .id,
+                                )
+                              }
+                            >
+                              {
+                                row
+                                  .blackMove
+                                  .san
+                              }
+                            </button>
+                          ) : (
+                            <span className="empty-black-move" />
+                          )}
+
+                          <NoteButton
+                            node={
+                              row.blackMove ??
+                              row.whiteMove
                             }
-                          >
-                            {row.blackMove.san}
-                          </button>
-                        ) : (
-                          <span className="empty-black-move" />
-                        )}
+                            onClick={
+                              openNote
+                            }
+                          />
+                        </div>
 
-                        <NoteButton
-                          node={row.blackMove ?? row.whiteMove}
-                          onClick={openNote}
-                        />
+                        {row
+                          .whiteMove
+                          ?.children
+                          .slice(1)
+                          .map(
+                            (
+                              variationId,
+                            ) => (
+                              <VariationLine
+                                key={
+                                  variationId
+                                }
+                                firstNodeId={
+                                  variationId
+                                }
+                                nodes={
+                                  nodes
+                                }
+                                currentNodeId={
+                                  currentNodeId
+                                }
+                                onMoveClick={
+                                  goToMove
+                                }
+                                onNoteClick={
+                                  openNote
+                                }
+                              />
+                            ),
+                          )}
+
+                        {row
+                          .blackMove
+                          ?.children
+                          .slice(1)
+                          .map(
+                            (
+                              variationId,
+                            ) => (
+                              <VariationLine
+                                key={
+                                  variationId
+                                }
+                                firstNodeId={
+                                  variationId
+                                }
+                                nodes={
+                                  nodes
+                                }
+                                currentNodeId={
+                                  currentNodeId
+                                }
+                                onMoveClick={
+                                  goToMove
+                                }
+                                onNoteClick={
+                                  openNote
+                                }
+                              />
+                            ),
+                          )}
                       </div>
-                      {row.whiteMove?.children
-                        .slice(1)
-                        .map((variationId) => (
-                          <VariationLine
-                            key={variationId}
-                            firstNodeId={variationId}
-                            nodes={nodes}
-                            currentNodeId={currentNodeId}
-                            onMoveClick={goToMove}
-                            onNoteClick={openNote}
-                          />
-                        ))}
-
-                      {row.blackMove?.children
-                        .slice(1)
-                        .map((variationId) => (
-                          <VariationLine
-                            key={variationId}
-                            firstNodeId={variationId}
-                            nodes={nodes}
-                            currentNodeId={currentNodeId}
-                            onMoveClick={goToMove}
-                            onNoteClick={openNote}
-                          />
-                        ))}
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               )}
 
               <div className="position-information">
-                <h3>Posición actual</h3>
+                <h3>
+                  Posición actual
+                </h3>
 
                 <p>
                   Turno:{" "}
                   <strong>
-                    {game.turn() === "w"
+                    {game.turn() ===
+                      "w"
                       ? "Blancas"
                       : "Negras"}
                   </strong>
@@ -1968,11 +3059,17 @@ function App() {
                 <p>
                   Jugada seleccionada:{" "}
                   <strong>
-                    {currentNodeId === "root"
+                    {currentNodeId ===
+                      "root"
                       ? "Posición inicial"
                       : `${Math.ceil(
-                        currentNode.ply / 2,
-                      )}${currentNode.ply % 2 === 1
+                        currentNode
+                          .ply /
+                        2,
+                      )}${currentNode
+                        .ply %
+                        2 ===
+                        1
                         ? "."
                         : "..."
                       } ${currentNode.san}`}
@@ -1984,93 +3081,136 @@ function App() {
         )}
       </section>
 
-      {noteNodeId && nodes[noteNodeId] && (
-        <div
-          className="note-overlay"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closeNote();
-            }
-          }}
-        >
-          <section
-            className="note-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="note-title"
-          >
-            <header className="note-dialog-header">
-              <div>
-                <span className="note-dialog-label">
-                  Apunte del movimiento
-                </span>
-
-                <h2 id="note-title">
-                  {Math.ceil(
-                    nodes[noteNodeId].ply / 2,
-                  )}
-                  {nodes[noteNodeId].ply % 2 === 1
-                    ? "."
-                    : "..."}{" "}
-                  {nodes[noteNodeId].san}
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                className="note-close-button"
-                onClick={closeNote}
-                aria-label="Cerrar nota"
-              >
-                ×
-              </button>
-            </header>
-
-            <textarea
-              className="note-textarea"
-              value={noteDraft}
-              onChange={(event) =>
-                setNoteDraft(event.target.value)
+      {noteNodeId &&
+        nodes[
+        noteNodeId
+        ] && (
+          <div
+            className="note-overlay"
+            onMouseDown={(
+              event,
+            ) => {
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
+                closeNote();
               }
-              placeholder="Escribe aquí tus ideas, planes, errores frecuentes o recordatorios..."
-              autoFocus
-            />
+            }}
+          >
+            <section
+              className="note-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="note-title"
+            >
+              <header className="note-dialog-header">
+                <div>
+                  <span className="note-dialog-label">
+                    Apunte del movimiento
+                  </span>
 
-            <footer className="note-dialog-actions">
-              {nodes[noteNodeId].note && (
+                  <h2 id="note-title">
+                    {Math.ceil(
+                      nodes[
+                        noteNodeId
+                      ].ply /
+                      2,
+                    )}
+
+                    {nodes[
+                      noteNodeId
+                    ].ply %
+                      2 ===
+                      1
+                      ? "."
+                      : "..."}{" "}
+
+                    {
+                      nodes[
+                        noteNodeId
+                      ].san
+                    }
+                  </h2>
+                </div>
+
                 <button
                   type="button"
-                  className="note-delete-button"
-                  onClick={deleteNote}
+                  className="note-close-button"
+                  onClick={
+                    closeNote
+                  }
+                  aria-label="Cerrar nota"
                 >
-                  Borrar nota
+                  ×
                 </button>
-              )}
+              </header>
 
-              <div className="note-main-actions">
-                <button
-                  type="button"
-                  className="note-cancel-button"
-                  onClick={closeNote}
-                >
-                  Cancelar
-                </button>
+              <textarea
+                className="note-textarea"
+                value={
+                  noteDraft
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setNoteDraft(
+                    event.target
+                      .value,
+                  )
+                }
+                placeholder="Escribe aquí tus ideas, planes, errores frecuentes o recordatorios..."
+                autoFocus
+              />
 
-                <button
-                  type="button"
-                  className="note-save-button"
-                  onClick={saveNote}
-                >
-                  Guardar
-                </button>
-              </div>
-            </footer>
-          </section>
-        </div>
-      )}
+              <footer className="note-dialog-actions">
+                {nodes[
+                  noteNodeId
+                ].note && (
+                    <button
+                      type="button"
+                      className="note-delete-button"
+                      onClick={
+                        deleteNote
+                      }
+                    >
+                      Borrar nota
+                    </button>
+                  )}
+
+                <div className="note-main-actions">
+                  <button
+                    type="button"
+                    className="note-cancel-button"
+                    onClick={
+                      closeNote
+                    }
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    className="note-save-button"
+                    onClick={
+                      saveNote
+                    }
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </footer>
+            </section>
+          </div>
+        )}
+
       <Toast
-        message={toastMessage}
-        visible={toastVisible}
+        message={
+          toastMessage
+        }
+        visible={
+          toastVisible
+        }
       />
     </main>
   );
