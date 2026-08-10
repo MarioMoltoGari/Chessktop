@@ -296,6 +296,21 @@ export function generateTrainingLines(
     }
 
     /*
+     * Root por sí solo representa una
+     * posición inicial, no una línea
+     * entrenable.
+     *
+     * Esto evita que un entrenamiento de
+     * un estudio vacío quede bloqueado
+     * eternamente en "Preparando posición".
+     */
+    if (
+        root.children.length === 0
+    ) {
+        return [];
+    }
+
+    /*
      * Línea principal:
      * seguimos siempre children[0].
      */

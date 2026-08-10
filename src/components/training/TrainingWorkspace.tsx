@@ -1,6 +1,5 @@
 import {
     useEffect,
-    useMemo,
     useRef,
     useState,
 } from "react";
@@ -40,12 +39,15 @@ type TrainingWorkspaceProps = {
     training: Training;
     studyName: string;
     studyContent: StudyContent;
+
     onAddNote: (
         nodeId: string,
     ) => void;
+
     onSessionCompleted: (
         session: TrainingSession,
     ) => void;
+
     onClose: () => void;
 };
 
@@ -164,17 +166,24 @@ export default function TrainingWorkspace({
         nodes.root?.fen ??
         new Chess().fen();
 
-    const trainingLines =
-        useMemo(
+    /*
+     * Las líneas se fijan cuando se monta
+     * esta sesión.
+     *
+     * Es especialmente importante en modo
+     * aleatorio: editar una nota durante un
+     * entrenamiento no debe volver a barajar
+     * el orden de las líneas.
+     */
+    const [
+        trainingLines,
+    ] =
+        useState<TrainingLine[]>(
             () =>
                 generateTrainingLines(
                     nodes,
                     training,
                 ),
-            [
-                nodes,
-                training,
-            ],
         );
 
     const firstTrainingLine =
@@ -254,6 +263,15 @@ export default function TrainingWorkspace({
     const sessionReportedRef =
         useRef(false);
 
+    /*
+     * Evita que un cambio de studyContent,
+     * por ejemplo guardar una nota durante
+     * el entrenamiento, vuelva a reproducir
+     * la jugada inicial de blancas.
+     */
+    const initialBlackMoveStartedRef =
+        useRef(false);
+
     const trainingPosition =
         createTrainingPosition(
             nodes,
@@ -287,10 +305,38 @@ export default function TrainingWorkspace({
             null;
     }
 
+    /*
+     * Ningún timeout del entrenamiento
+     * puede sobrevivir al desmontaje
+     * del workspace.
+     */
+    useEffect(() => {
+        return () => {
+            if (
+                opponentTimeoutRef.current !==
+                null
+            ) {
+                window.clearTimeout(
+                    opponentTimeoutRef.current,
+                );
+
+                opponentTimeoutRef.current =
+                    null;
+            }
+        };
+    }, []);
+
+    /*
+     * Si el usuario entrena con negras,
+     * mostramos brevemente la posición
+     * inicial antes de que Chessktop
+     * realice la primera jugada blanca.
+     */
     useEffect(() => {
         if (
             training.side !== "black" ||
-            !firstTrainingLine
+            !firstTrainingLine ||
+            initialBlackMoveStartedRef.current
         ) {
             return;
         }
@@ -311,6 +357,9 @@ export default function TrainingWorkspace({
         ) {
             return;
         }
+
+        initialBlackMoveStartedRef.current =
+            true;
 
         opponentTimeoutRef.current =
             window.setTimeout(() => {
@@ -1206,9 +1255,8 @@ export default function TrainingWorkspace({
         );
 
         /*
-         * Solo registramos esta sesión
-         * una vez aunque React vuelva
-         * a renderizar el componente.
+         * Solo registramos esta sesión una
+         * vez aunque React vuelva a renderizar.
          */
         if (
             !sessionReportedRef.current
@@ -1309,6 +1357,71 @@ export default function TrainingWorkspace({
     const reviewedPositions =
         session.reviewNodeIds.length;
 
+    /*
+     * Un estudio vacío o reiniciado puede
+     * seguir teniendo un entrenamiento
+     * creado previamente.
+     *
+     * En lugar de dejar el workspace bloqueado
+     * mostramos un estado controlado.
+     */
+    if (
+        trainingLines.length === 0
+    ) {
+        return (
+            <section className="training-workspace">
+                <header className="training-workspace-header">
+                    <div>
+                        <span className="training-workspace-label">
+                            Entrenamiento
+                        </span>
+
+                        <h2>
+                            {training.name}
+                        </h2>
+
+                        <p>
+                            {studyName}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={
+                            onClose
+                        }
+                    >
+                        Volver al estudio
+                    </button>
+                </header>
+
+                <div className="training-review-intro">
+                    <span className="training-review-intro-label">
+                        Sin movimientos
+                    </span>
+
+                    <h3>
+                        Este entrenamiento no tiene posiciones que practicar
+                    </h3>
+
+                    <p>
+                        Añade movimientos al estudio antes de iniciar este entrenamiento.
+                    </p>
+
+                    <button
+                        type="button"
+                        className="training-review-start-button"
+                        onClick={
+                            onClose
+                        }
+                    >
+                        Volver al estudio
+                    </button>
+                </div>
+            </section>
+        );
+    }
+
     if (
         session.phase === "completed"
     ) {
@@ -1331,7 +1444,9 @@ export default function TrainingWorkspace({
 
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={
+                            onClose
+                        }
                     >
                         Volver al estudio
                     </button>
@@ -1358,9 +1473,9 @@ export default function TrainingWorkspace({
                         className="training-results-accuracy"
                         style={{
                             background: `conic-gradient(
-            #667d62 ${accuracy}%,
-            #e5e8e2 ${accuracy}% 100%
-        )`,
+                                #667d62 ${accuracy}%,
+                                #e5e8e2 ${accuracy}% 100%
+                            )`,
                         }}
                     >
                         <div className="training-results-accuracy-inner">
@@ -1563,7 +1678,8 @@ export default function TrainingWorkspace({
                         </strong>
 
                         <span>
-                            {session.reviewNodeIds.length === 1
+                            {session.reviewNodeIds.length ===
+                                1
                                 ? "posición por repasar"
                                 : "posiciones por repasar"}
                         </span>
@@ -1604,7 +1720,9 @@ export default function TrainingWorkspace({
 
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={
+                        onClose
+                    }
                 >
                     Volver al estudio
                 </button>
