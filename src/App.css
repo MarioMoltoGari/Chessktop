@@ -1,6 +1,13 @@
+html,
+body,
 #root {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 * {
@@ -13,8 +20,8 @@ textarea {
 }
 
 .app {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
   background: #f3f1ec;
   color: #262825;
 }
@@ -52,9 +59,9 @@ textarea,
 }
 
 :root {
-  --side-panel-min-width: 300px;
+  --side-panel-min-width: 280px;
   --side-panel-max-width: 380px;
-  --side-panel-height: 680px;
+  --side-panel-height: min(680px, calc(100vh - 124px));
 }
 
 .library-sidebar,
@@ -68,7 +75,8 @@ textarea,
 .workspace {
   display: grid;
 
-  grid-template-columns: 440px minmax(420px, 680px) 440px;
+  grid-template-columns:
+    minmax(var(--side-panel-min-width), var(--side-panel-max-width)) minmax(420px, 680px) minmax(var(--side-panel-min-width), var(--side-panel-max-width));
 
   gap: 24px;
   justify-content: center;
@@ -82,9 +90,11 @@ textarea,
 
 .board-container {
   width: min(100%,
-      calc(100vh - 430px));
+      680px,
+      calc(100dvh - 430px));
 
-  min-width: 420px;
+  min-width: 0;
+
   margin: 0 auto;
 }
 
@@ -366,22 +376,6 @@ textarea,
   border-top: 1px solid #dedbd3;
 }
 
-@media (max-width: 900px) {
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .board-section {
-    width: min(100%, 680px);
-    margin: 0 auto;
-  }
-
-  .moves-panel {
-    width: min(100%, 680px);
-    min-height: auto;
-    margin: 0 auto;
-  }
-}
 
 .moves-table-header {
   display: grid;
@@ -1394,7 +1388,7 @@ textarea,
 }
 
 /**********************************/
-/* Estilos del dialogo de movimiento
+/* Estilos del dialogo de movimiento */
 /**********************************/
 
 .move-dialog-overlay {
@@ -2865,4 +2859,599 @@ textarea,
 .engine-retry-button:hover {
   background: #667d62;
   color: #ffffff;
+}
+
+/**************************************/
+/* Responsive layout                  */
+/**************************************/
+
+@media (max-width: 1480px) {
+  :root {
+    --side-panel-min-width: 260px;
+    --side-panel-max-width: 330px;
+    --side-panel-height: min(640px, calc(100vh - 116px));
+  }
+
+  .workspace {
+    grid-template-columns:
+      minmax(260px, 330px) minmax(400px, 620px) minmax(260px, 330px);
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+
+    min-height: 68px;
+
+    padding: 10px 28px;
+
+    background: #ffffff;
+
+    border-bottom:
+      1px solid #d9d6ce;
+  }
+
+  .library-sidebar-header,
+  .moves-panel {
+    padding: 18px;
+  }
+
+  .board-controls {
+    gap: 8px;
+  }
+
+  .board-controls button {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+}
+
+/* Portátiles: biblioteca a la izquierda; tablero y movimientos a la derecha. */
+/*
+ * Portátil / tablet horizontal.
+ *
+ * Biblioteca a la izquierda.
+ * Tablero y movimientos a la derecha.
+ */
+@media (max-width: 1180px) and (min-width: 901px) {
+  :root {
+    --side-panel-height: 620px;
+  }
+
+  body {
+    overflow-y: auto;
+  }
+
+  .app {
+    height: auto;
+    min-height: 100dvh;
+
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .workspace {
+    display: grid;
+
+    grid-template-columns:
+      minmax(260px, 340px) minmax(0, 1fr);
+
+    grid-template-areas:
+      "library board"
+      "library moves";
+
+    gap: 18px;
+
+    width: 100%;
+    max-width: 1180px;
+
+    margin: 0 auto;
+
+    padding: 18px;
+  }
+
+  .library-sidebar {
+    grid-area: library;
+
+    position: sticky;
+    top: 18px;
+
+    width: 100%;
+
+    height:
+      min(720px,
+        calc(100dvh - 36px));
+  }
+
+  .board-section {
+    grid-area: board;
+
+    width: 100%;
+    min-width: 0;
+
+    margin: 0 auto;
+  }
+
+  .board-container {
+    width:
+      min(100%,
+        620px);
+  }
+
+  .moves-panel {
+    grid-area: moves;
+
+    width: 100%;
+    height: 520px;
+
+    margin: 0;
+  }
+
+  .training-workspace {
+    grid-column: 2;
+
+    width: 100%;
+
+    height: auto;
+    min-height: 620px;
+  }
+
+  .training-session-layout {
+    grid-template-columns:
+      minmax(340px, 1fr) minmax(200px, 250px);
+
+    gap: 18px;
+  }
+
+  .training-board {
+    max-width: 520px;
+  }
+}
+
+/* Tablet y pantallas estrechas: una sola columna y scroll de página. */
+@media (max-width: 900px) {
+  :root {
+    --side-panel-height: auto;
+  }
+
+  .app-header {
+    min-height: 68px;
+    padding: 12px 16px;
+  }
+
+  .app-header h1 {
+    font-size: 1.45rem;
+  }
+
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "library"
+      "board"
+      "moves";
+    gap: 16px;
+    width: 100%;
+    max-width: 760px;
+    padding: 16px;
+  }
+
+  .library-sidebar {
+    grid-area: library;
+    position: static;
+    width: 100%;
+    height: auto;
+    max-height: 520px;
+  }
+
+  .library-tree {
+    min-height: 180px;
+    max-height: 300px;
+  }
+
+  .board-section {
+    grid-area: board;
+    width: 100%;
+  }
+
+  .board-container {
+    /*
+   * En tablet/móvil abandonamos la restricción
+   * por altura del viewport.
+   *
+   * La página puede hacer scroll vertical,
+   * así que priorizamos un tablero cómodo.
+   */
+    width: min(100%,
+        620px);
+
+    margin: 0 auto;
+  }
+
+  .moves-panel {
+    grid-area: moves;
+    width: 100%;
+    height: auto;
+    min-height: 420px;
+    max-height: 680px;
+    margin: 0;
+  }
+
+  .moves-table {
+    min-height: 260px;
+  }
+
+  .training-workspace {
+    grid-column: 1;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 20px;
+  }
+
+  .training-session-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .training-session-panel {
+    width: min(100%, 560px);
+    margin: 0 auto;
+  }
+
+  .training-results {
+    margin-block: 24px;
+    padding: 24px;
+  }
+
+  .training-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .training-review-intro {
+    margin-top: 32px;
+    padding: 28px 22px;
+  }
+
+  .note-overlay,
+  .modal-overlay,
+  .move-dialog-overlay {
+    padding: 16px;
+  }
+}
+
+/* Móvil. */
+@media (max-width: 600px) {
+  .app-header {
+    min-height: 62px;
+    padding: 10px 12px;
+  }
+
+  .app-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .app-header p {
+    max-width: calc(100vw - 24px);
+    overflow: hidden;
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .workspace {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .library-sidebar,
+  .moves-panel,
+  .stockfish-panel,
+  .training-workspace {
+    border-radius: 8px;
+  }
+
+  .library-sidebar-header {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .library-header-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .library-delete-mode-button {
+    width: 100%;
+  }
+
+  .library-header-actions button {
+    min-height: 38px;
+  }
+
+  .library-search {
+    width: calc(100% - 20px);
+    margin: 10px;
+  }
+
+  .library-footer {
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .library-footer-group {
+    flex: 1 1 0;
+  }
+
+  .library-footer-actions {
+    flex-direction: column;
+  }
+
+  .library-import-button,
+  .library-export-button {
+    padding-block: 8px;
+  }
+
+  .engine-toolbar {
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 8px 10px;
+  }
+
+  .engine-status-text {
+    flex: 1 0 100%;
+    margin-left: 0;
+    text-align: right;
+  }
+
+  .engine-line {
+    grid-template-columns: 54px minmax(0, 1fr) 34px;
+    padding-inline: 10px;
+  }
+
+  .board-controls {
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .board-controls button {
+    flex: 1 1 calc(33.333% - 7px);
+    min-width: 92px;
+    padding: 8px 9px;
+    font-size: 0.82rem;
+  }
+
+  .moves-panel {
+    padding: 16px;
+  }
+
+  .moves-table-header,
+  .move-row {
+    grid-template-columns: 42px minmax(90px, 1fr) minmax(90px, 1fr) 30px;
+    gap: 6px;
+  }
+
+  .move-row {
+    min-width: 340px;
+  }
+
+  .variation-block {
+    min-width: calc(100% - 42px);
+    margin-left: 38px;
+    padding-inline: 8px;
+  }
+
+  .variation-row {
+    min-width: 300px;
+    grid-template-columns: 40px minmax(82px, 1fr) minmax(82px, 1fr) 30px;
+  }
+
+  .position-information {
+    font-size: 0.86rem;
+  }
+
+  .note-overlay,
+  .modal-overlay,
+  .move-dialog-overlay {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .note-dialog,
+  .modal,
+  .move-dialog {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 12px 12px 8px 8px;
+  }
+
+  .note-dialog-header,
+  .modal-header,
+  .move-dialog-header {
+    padding: 15px 16px;
+  }
+
+  .note-textarea {
+    width: calc(100% - 32px);
+    min-height: 180px;
+    margin: 16px;
+  }
+
+  .note-dialog-actions,
+  .modal-footer {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .modal-primary-button,
+  .modal-secondary-button,
+  .modal-danger-button {
+    flex: 1 1 120px;
+  }
+
+  .training-workspace {
+    padding: 16px;
+  }
+
+  .training-workspace-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .training-workspace-header button {
+    width: 100%;
+  }
+
+  .training-session-layout {
+    padding-top: 16px;
+  }
+
+  .training-feedback-note-suggestion,
+  .training-feedback-solution {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .training-feedback-note-suggestion button,
+  .training-feedback-solution button {
+    width: 100%;
+  }
+
+  .training-results {
+    margin-block: 16px;
+    padding: 18px;
+  }
+
+  .training-results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .training-results-actions {
+    flex-direction: column;
+  }
+
+  .training-results-restart,
+  .training-results-close,
+  .training-review-start-button {
+    width: 100%;
+  }
+
+  .training-review-intro {
+    margin-top: 18px;
+    padding: 22px 16px;
+  }
+
+  .toast {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    max-width: none;
+  }
+
+  .context-menu {
+    max-width: calc(100vw - 16px);
+  }
+
+  .error-boundary {
+    padding: 14px;
+  }
+
+  .error-boundary-card {
+    padding: 22px 18px;
+  }
+}
+
+@media (max-width: 390px) {
+  .workspace {
+    padding-inline: 8px;
+  }
+
+  .library-footer {
+    flex-direction: column;
+  }
+
+  .library-footer-actions {
+    flex-direction: row;
+  }
+
+  .board-controls button {
+    flex-basis: calc(50% - 7px);
+  }
+
+  .training-results-accuracy {
+    width: 124px;
+    height: 124px;
+  }
+
+  .training-results-accuracy-inner {
+    width: 108px;
+    height: 108px;
+  }
+}
+
+/* En dispositivos táctiles las acciones de carpeta no pueden depender del hover. */
+@media (hover: none) {
+  .library-row-actions {
+    opacity: 1;
+  }
+}
+
+/**************/
+/* Responsive */
+/**************/
+
+
+/*
+ * Escritorio.
+ *
+ * Chessktop funciona como una aplicación:
+ * todo el workspace cabe dentro del viewport
+ * y los paneles gestionan su propio scroll.
+ */
+@media (min-width: 1181px) {
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+
+  body {
+    overflow-y: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+
+    overflow: hidden;
+  }
+
+  .app-header {
+    flex: 0 0 auto;
+  }
+
+  .workspace {
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    overflow: hidden;
+  }
+
+  .library-sidebar,
+  .moves-panel {
+    /*
+     * El panel no puede provocar que
+     * crezca toda la página.
+     */
+    max-height: calc(100dvh - 124px);
+  }
 }

@@ -2509,6 +2509,148 @@ function AppContent() {
     }
   }
 
+  /*
+ * Navegación rápida por el estudio.
+ *
+ * ← movimiento anterior
+ * → movimiento siguiente
+ *
+ * Se desactiva mientras escribimos,
+ * mientras hay un diálogo abierto o
+ * durante un entrenamiento.
+ */
+  useEffect(() => {
+    function handleNavigationKeyDown(
+      event: KeyboardEvent,
+    ) {
+      if (
+        workspace?.type !==
+        "study" ||
+        !selectedStudyId
+      ) {
+        return;
+      }
+
+      if (
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey
+      ) {
+        return;
+      }
+
+      const target =
+        event.target instanceof
+          HTMLElement
+          ? event.target
+          : null;
+
+      if (
+        target?.closest(
+          "input, textarea, select, [contenteditable='true']",
+        )
+      ) {
+        return;
+      }
+
+      /*
+       * Tampoco navegamos mientras hay
+       * algún diálogo superpuesto.
+       */
+      if (
+        document.querySelector(
+          ".modal-overlay, .note-overlay, .move-dialog-overlay",
+        )
+      ) {
+        return;
+      }
+
+      let nextNodeId:
+        string | null =
+        null;
+
+      if (
+        event.key ===
+        "ArrowLeft"
+      ) {
+        nextNodeId =
+          nodes[
+            currentNodeId
+          ]?.parentId ??
+          null;
+      }
+
+      if (
+        event.key ===
+        "ArrowRight"
+      ) {
+        nextNodeId =
+          nodes[
+            currentNodeId
+          ]?.children[0] ??
+          null;
+      }
+
+      if (!nextNodeId) {
+        return;
+      }
+
+      event.preventDefault();
+
+      setStudyContents(
+        (
+          previousContents,
+        ) => {
+          const content =
+            previousContents[
+            selectedStudyId
+            ];
+
+          if (
+            !content ||
+            !content.nodes[
+            nextNodeId
+            ]
+          ) {
+            return previousContents;
+          }
+
+          return {
+            ...previousContents,
+
+            [selectedStudyId]: {
+              ...content,
+
+              currentNodeId:
+                nextNodeId,
+
+              updatedAt:
+                new Date()
+                  .toISOString(),
+            },
+          };
+        },
+      );
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleNavigationKeyDown,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleNavigationKeyDown,
+      );
+    };
+  }, [
+    workspace,
+    selectedStudyId,
+    nodes,
+    currentNodeId,
+  ]);
+
   function deleteCurrentBranch() {
     if (
       currentNodeId ===
