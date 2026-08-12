@@ -1,3 +1,7 @@
+import {
+    Library,
+} from "lucide-react";
+
 type ToastProps = {
     message: string;
     visible: boolean;
@@ -14,8 +18,11 @@ export default function Toast({
             role="status"
             aria-live="polite"
         >
-            <span className="toast-icon">
-                📚
+            <span
+                className="toast-icon"
+                aria-hidden="true"
+            >
+                <Library size={18} />
             </span>
 
             <span>{message}</span>

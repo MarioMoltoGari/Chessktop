@@ -1473,7 +1473,7 @@ export default function TrainingWorkspace({
                         className="training-results-accuracy"
                         style={{
                             background: `conic-gradient(
-                                #667d62 ${accuracy}%,
+                                #526d82 ${accuracy}%,
                                 #e5e8e2 ${accuracy}% 100%
                             )`,
                         }}
@@ -1870,7 +1870,7 @@ export default function TrainingWorkspace({
 
                                 darkSquareStyle: {
                                     backgroundColor:
-                                        "#77906f",
+                                        "#71879a",
                                 },
                             }}
                         />

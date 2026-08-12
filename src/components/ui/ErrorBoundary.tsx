@@ -4,6 +4,11 @@ import {
     type ReactNode,
 } from "react";
 
+import {
+    RotateCcw,
+    TriangleAlert,
+} from "lucide-react";
+
 type ErrorBoundaryProps = {
     children: ReactNode;
 };
@@ -17,10 +22,11 @@ export default class ErrorBoundary extends Component<
     ErrorBoundaryProps,
     ErrorBoundaryState
 > {
-    state: ErrorBoundaryState = {
-        hasError: false,
-        error: null,
-    };
+    state:
+        ErrorBoundaryState = {
+            hasError: false,
+            error: null,
+        };
 
     static getDerivedStateFromError(
         error: Error,
@@ -42,13 +48,18 @@ export default class ErrorBoundary extends Component<
         );
     }
 
-    private reloadApplication = () => {
-        window.location.reload();
-    };
+    private reloadApplication =
+        () => {
+            window.location.reload();
+        };
 
     render() {
-        if (!this.state.hasError) {
-            return this.props.children;
+        if (
+            !this.state.hasError
+        ) {
+            return (
+                this.props.children
+            );
         }
 
         return (
@@ -58,7 +69,10 @@ export default class ErrorBoundary extends Component<
                         className="error-boundary-icon"
                         aria-hidden="true"
                     >
-                        ♟
+                        <TriangleAlert
+                            size={38}
+                            strokeWidth={1.8}
+                        />
                     </span>
 
                     <h1>
@@ -73,7 +87,11 @@ export default class ErrorBoundary extends Component<
 
                     {this.state.error && (
                         <code className="error-boundary-message">
-                            {this.state.error.message}
+                            {
+                                this.state
+                                    .error
+                                    .message
+                            }
                         </code>
                     )}
 
@@ -83,7 +101,14 @@ export default class ErrorBoundary extends Component<
                             this.reloadApplication
                         }
                     >
-                        Reiniciar Chessktop
+                        <RotateCcw
+                            size={16}
+                            aria-hidden="true"
+                        />
+
+                        <span>
+                            Reiniciar Chessktop
+                        </span>
                     </button>
                 </section>
             </main>

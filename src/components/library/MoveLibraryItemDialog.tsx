@@ -1,3 +1,9 @@
+import {
+    Folder,
+    Library,
+    X,
+} from "lucide-react";
+
 import type {
     LibraryFolder,
 } from "../../types/library";
@@ -25,20 +31,28 @@ function getFolderDepth(
     folder: LibraryFolder,
 ): number {
     let depth = 0;
-    let parentId = folder.parentId;
 
-    while (parentId !== null) {
-        const parent = folders.find(
-            (candidate) =>
-                candidate.id === parentId,
-        );
+    let parentId =
+        folder.parentId;
+
+    while (
+        parentId !== null
+    ) {
+        const parent =
+            folders.find(
+                (candidate) =>
+                    candidate.id ===
+                    parentId,
+            );
 
         if (!parent) {
             break;
         }
 
         depth += 1;
-        parentId = parent.parentId;
+
+        parentId =
+            parent.parentId;
     }
 
     return depth;
@@ -91,10 +105,15 @@ export default function MoveLibraryItemDialog({
 
                     <button
                         type="button"
-                        onClick={onCancel}
+                        onClick={
+                            onCancel
+                        }
                         aria-label="Cerrar"
                     >
-                        ×
+                        <X
+                            size={18}
+                            aria-hidden="true"
+                        />
                     </button>
                 </header>
 
@@ -102,15 +121,25 @@ export default function MoveLibraryItemDialog({
                     <button
                         type="button"
                         className={
-                            currentFolderId === null
+                            currentFolderId ===
+                                null
                                 ? "active"
                                 : ""
                         }
                         onClick={() =>
-                            onConfirm(null)
+                            onConfirm(
+                                null,
+                            )
                         }
                     >
-                        Biblioteca principal
+                        <Library
+                            size={16}
+                            aria-hidden="true"
+                        />
+
+                        <span>
+                            Biblioteca principal
+                        </span>
                     </button>
 
                     {availableFolders.map(
@@ -124,7 +153,9 @@ export default function MoveLibraryItemDialog({
                             return (
                                 <button
                                     type="button"
-                                    key={folder.id}
+                                    key={
+                                        folder.id
+                                    }
                                     className={
                                         currentFolderId ===
                                             folder.id
@@ -133,7 +164,9 @@ export default function MoveLibraryItemDialog({
                                     }
                                     style={{
                                         paddingLeft:
-                                            14 + depth * 18,
+                                            14 +
+                                            depth *
+                                            18,
                                     }}
                                     onClick={() =>
                                         onConfirm(
@@ -141,7 +174,14 @@ export default function MoveLibraryItemDialog({
                                         )
                                     }
                                 >
-                                    📁 {folder.name}
+                                    <Folder
+                                        size={16}
+                                        aria-hidden="true"
+                                    />
+
+                                    <span>
+                                        {folder.name}
+                                    </span>
                                 </button>
                             );
                         },
@@ -151,7 +191,9 @@ export default function MoveLibraryItemDialog({
                 <footer className="move-dialog-actions">
                     <button
                         type="button"
-                        onClick={onCancel}
+                        onClick={
+                            onCancel
+                        }
                     >
                         Cancelar
                     </button>

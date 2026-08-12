@@ -62,6 +62,28 @@ textarea,
   --side-panel-min-width: 280px;
   --side-panel-max-width: 380px;
   --side-panel-height: min(680px, calc(100vh - 124px));
+
+
+  --color-primary: #526d82;
+  --color-primary-hover: #405b70;
+  --color-primary-text: #49677e;
+
+  --color-primary-soft: #e9eff4;
+  --color-primary-softer: #eef3f7;
+
+  --color-primary-border: #b9c9d5;
+  --color-primary-muted: #91a8b9;
+
+  --color-primary-focus: rgba(82,
+      109,
+      130,
+      0.14);
+
+  --side-panel-min-width: 280px;
+  --side-panel-max-width: 380px;
+  --side-panel-height:
+    min(680px, calc(100vh - 124px));
+
 }
 
 .library-sidebar,
@@ -2859,6 +2881,19 @@ textarea,
 .engine-retry-button:hover {
   background: #667d62;
   color: #ffffff;
+}
+
+.move-dialog-folders button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-boundary-card button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 /**************************************/

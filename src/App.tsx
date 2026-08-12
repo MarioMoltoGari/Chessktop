@@ -14,13 +14,18 @@ import {
   Chessboard,
 } from "react-chessboard";
 
-import "./App.css";
+import "./App1.css";
 
 import LibrarySidebar from "./components/LibrarySidebar";
 
 import {
   DialogProvider,
 } from "./components/dialogs/DialogProvider";
+
+import NoteButton from "./components/NoteButton";
+import {
+  X,
+} from "lucide-react";
 
 import {
   useDialogs,
@@ -136,14 +141,6 @@ type VariationLineProps = {
   ) => void;
 
   depth?: number;
-};
-
-type NoteButtonProps = {
-  node: MoveNode;
-
-  onClick: (
-    nodeId: string,
-  ) => void;
 };
 
 /*
@@ -439,49 +436,6 @@ function getSubtreeNodeIds(
           ),
       ),
   ];
-}
-
-function NoteButton({
-  node,
-  onClick,
-}: NoteButtonProps) {
-  const hasNote =
-    node.note
-      .trim()
-      .length > 0;
-
-  return (
-    <button
-      type="button"
-      className={`note-button ${hasNote
-        ? "has-note"
-        : ""
-        }`}
-      onClick={(
-        event,
-      ) => {
-        event.stopPropagation();
-
-        onClick(
-          node.id,
-        );
-      }}
-      aria-label={
-        hasNote
-          ? `Abrir nota de ${node.san}`
-          : `Añadir nota a ${node.san}`
-      }
-      title={
-        hasNote
-          ? "Abrir nota"
-          : "Añadir nota"
-      }
-    >
-      {hasNote
-        ? "📝"
-        : "+"}
-    </button>
-  );
 }
 
 /*
@@ -2990,7 +2944,7 @@ function AppContent() {
 
                     darkSquareStyle: {
                       backgroundColor:
-                        "#77906f",
+                        "#71879a",
                     },
                   }}
                 />
@@ -3350,7 +3304,10 @@ function AppContent() {
                   }
                   aria-label="Cerrar nota"
                 >
-                  ×
+                  <X
+                    size={19}
+                    aria-hidden="true"
+                  />
                 </button>
               </header>
 

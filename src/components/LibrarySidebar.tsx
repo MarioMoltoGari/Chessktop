@@ -1,4 +1,15 @@
 import { useMemo, useState, useRef } from "react";
+import {
+    BookOpen,
+    ChevronDown,
+    ChevronRight,
+    Dumbbell,
+    FilePlus2,
+    Folder,
+    FolderOpen,
+    FolderPlus,
+    Trash2,
+} from "lucide-react";
 import type {
     ChessStudy,
     LibraryFolder,
@@ -239,9 +250,11 @@ function StudyNode({
                 }}
             >
                 <span aria-hidden="true">
-                    {deleteMode
-                        ? "🗑️"
-                        : "♟"}
+                    {deleteMode ? (
+                        <Trash2 size={16} />
+                    ) : (
+                        <BookOpen size={16} />
+                    )}
                 </span>
 
                 <span>{study.name}</span>
@@ -304,7 +317,7 @@ function StudyNode({
                                     className="library-training-icon"
                                     aria-hidden="true"
                                 >
-                                    🏋
+                                    <Dumbbell size={15} />
                                 </span>
 
                                 <span className="library-training-content">
@@ -405,11 +418,13 @@ function FolderNode({
                                 : `Expandir ${folder.name}`
                     }
                 >
-                    {deleteMode
-                        ? "×"
-                        : folder.isExpanded
-                            ? "▾"
-                            : "▸"}
+                    {deleteMode ? (
+                        <Trash2 size={15} />
+                    ) : folder.isExpanded ? (
+                        <ChevronDown size={16} />
+                    ) : (
+                        <ChevronRight size={16} />
+                    )}
                 </button>
 
                 <button
@@ -421,11 +436,13 @@ function FolderNode({
                     }}
                 >
                     <span aria-hidden="true">
-                        {deleteMode
-                            ? "🗑️"
-                            : folder.isExpanded
-                                ? "📂"
-                                : "📁"}
+                        {deleteMode ? (
+                            <Trash2 size={16} />
+                        ) : folder.isExpanded ? (
+                            <FolderOpen size={16} />
+                        ) : (
+                            <Folder size={16} />
+                        )}
                     </span>
 
                     <span>{folder.name}</span>
@@ -442,7 +459,10 @@ function FolderNode({
                             title="Crear subcarpeta"
                             aria-label={`Crear subcarpeta dentro de ${folder.name}`}
                         >
-                            +📁
+                            <FolderPlus
+                                size={15}
+                                aria-hidden="true"
+                            />
                         </button>
 
                         <button
@@ -454,7 +474,10 @@ function FolderNode({
                             title="Crear estudio"
                             aria-label={`Crear estudio dentro de ${folder.name}`}
                         >
-                            +♟
+                            <FilePlus2
+                                size={15}
+                                aria-hidden="true"
+                            />
                         </button>
                     </div>
                 )}
