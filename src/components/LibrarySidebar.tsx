@@ -1638,15 +1638,10 @@ export default function LibrarySidebar({
                     library.studies.length ===
                     0 ? (
                     <div className="library-empty-state">
-                        <BookOpen
-                            size={24}
-                            aria-hidden="true"
-                        />
-
-                        <p>
+                        <strong>
                             Tu biblioteca está vacía.
-                        </p>
-
+                        </strong>
+                        <br></br>
                         <span>
                             Crea una carpeta o un estudio para empezar.
                         </span>
