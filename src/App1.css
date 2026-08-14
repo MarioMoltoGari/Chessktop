@@ -2920,16 +2920,18 @@ textarea,
     }
 }
 
-/* Portátiles: biblioteca a la izquierda; tablero y movimientos a la derecha. */
 /*
- * Portátil / tablet horizontal.
- *
- * Biblioteca a la izquierda.
- * Tablero y movimientos a la derecha.
- */
+ * Tablet / portátil estrecho.
+ *
+ * Primera fila:
+ * Biblioteca | Tablero
+ *
+ * Segunda fila:
+ * Movimientos centrados.
+ */
 @media (max-width: 1180px) and (min-width: 901px) {
     :root {
-        --side-panel-height: 620px;
+        --side-panel-height: auto;
     }
 
     body {
@@ -2944,41 +2946,84 @@ textarea,
         overflow-y: visible;
     }
 
+    /*
+     * En este tamaño el header consume
+     * demasiado espacio y aporta poca
+     * información.
+     */
+    .app-header {
+        display: none;
+    }
+
     .workspace {
         display: grid;
 
         grid-template-columns:
-            minmax(260px, 340px) minmax(0, 1fr);
+            minmax(260px, 340px) minmax(0, 620px);
 
         grid-template-areas:
             "library board"
-            "library moves";
+            "moves moves";
 
-        gap: 18px;
+        /*
+         * Hace que biblioteca y board-section
+         * ocupen toda la altura de la primera fila.
+         */
+        align-items: stretch;
+        justify-content: center;
+
+        column-gap: 18px;
+        row-gap: 24px;
 
         width: 100%;
-        max-width: 1180px;
+        max-width: 1040px;
 
         margin: 0 auto;
-
-        padding: 18px;
+        padding: 20px;
     }
 
+    /*
+     * La altura de esta fila la determina
+     * principalmente Stockfish + tablero +
+     * controles.
+     *
+     * La biblioteca se estira automáticamente
+     * hasta exactamente esa misma altura.
+     */
     .library-sidebar {
         grid-area: library;
 
-        position: sticky;
-        top: 18px;
+        position: static;
+
+        align-self: stretch;
 
         width: 100%;
+        height: auto;
+        max-height: none;
 
-        height:
-            min(720px,
-                calc(100dvh - 36px));
+        min-height: 0;
+    }
+
+    /*
+     * El árbol absorbe el espacio libre
+     * disponible dentro de la biblioteca.
+     */
+    .library-tree {
+        flex: 1 1 auto;
+
+        min-height: 0;
+        max-height: none;
+    }
+
+    .library-footer {
+        flex: 0 0 auto;
     }
 
     .board-section {
         grid-area: board;
+
+        display: flex;
+        flex-direction: column;
 
         width: 100%;
         min-width: 0;
@@ -2986,28 +3031,44 @@ textarea,
         margin: 0 auto;
     }
 
+    /*
+     * En tablet priorizamos tamaño cómodo
+     * del tablero. La página puede hacer scroll.
+     */
     .board-container {
-        width:
-            min(100%,
+        width: min(100%,
                 620px);
+
+        margin: 0 auto;
     }
 
+    /*
+     * Movimientos queda centrado debajo
+     * de las dos columnas.
+     */
     .moves-panel {
         grid-area: moves;
 
-        width: 100%;
+        justify-self: center;
+
+        width: min(100%,
+                680px);
+
         height: 520px;
 
-        margin: 0;
+        margin: 0 auto;
     }
 
     .training-workspace {
-        grid-column: 2;
+        grid-column: 1 / -1;
 
-        width: 100%;
+        width: min(100%,
+                900px);
 
         height: auto;
         min-height: 620px;
+
+        margin: 0 auto;
     }
 
     .training-session-layout {
@@ -3055,12 +3116,13 @@ textarea,
         position: static;
         width: 100%;
         height: auto;
-        max-height: 520px;
+        max-height: none;
+        overflow: hidden;
     }
 
     .library-tree {
-        min-height: 180px;
-        max-height: 300px;
+        min-height: 200px;
+        max-height: 360px;
     }
 
     .board-section {
@@ -3137,20 +3199,7 @@ textarea,
 /* Móvil. */
 @media (max-width: 600px) {
     .app-header {
-        min-height: 62px;
-        padding: 10px 12px;
-    }
-
-    .app-header h1 {
-        font-size: 1.3rem;
-    }
-
-    .app-header p {
-        max-width: calc(100vw - 24px);
-        overflow: hidden;
-        font-size: 0.82rem;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        display: none;
     }
 
     .workspace {
