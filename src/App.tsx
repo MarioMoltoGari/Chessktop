@@ -25,7 +25,10 @@ import {
 import NoteButton from "./components/NoteButton";
 import {
   X,
+  CircleHelp
 } from "lucide-react";
+
+import Onboarding from "./components/onboarding/Onboarding";
 
 import {
   useDialogs,
@@ -824,6 +827,9 @@ function loadAppState():
   };
 }
 
+const ONBOARDING_STORAGE_KEY =
+  "chessktop-onboarding-completed";
+
 const EMPTY_NODES =
   createInitialNodes();
 
@@ -867,6 +873,22 @@ function AppContent() {
     useState<ActiveWorkspace>(
       initialState.workspace,
     );
+
+  const [
+    onboardingOpen,
+    setOnboardingOpen,
+  ] =
+    useState(() => {
+      try {
+        return (
+          localStorage.getItem(
+            ONBOARDING_STORAGE_KEY,
+          ) !== "true"
+        );
+      } catch {
+        return true;
+      }
+    });
 
   const [
     studyContents,
@@ -1232,6 +1254,36 @@ function AppContent() {
       }
     };
   }, []);
+
+  function completeOnboarding() {
+    try {
+      localStorage.setItem(
+        ONBOARDING_STORAGE_KEY,
+        "true",
+      );
+    } catch {
+      /*
+       * El onboarding puede cerrarse aunque
+       * localStorage no esté disponible.
+       */
+    }
+
+    setOnboardingOpen(
+      false,
+    );
+  }
+
+  function closeOnboarding() {
+    setOnboardingOpen(
+      false,
+    );
+  }
+
+  function openOnboarding() {
+    setOnboardingOpen(
+      true,
+    );
+  }
 
   function openTraining(
     trainingId: string,
@@ -2780,604 +2832,630 @@ function AppContent() {
   }
 
   return (
-    <main className="app">
-      <header className="app-header">
-        <div>
-          <h1>
-            Chessktop
-          </h1>
+    <>
+      <main className="app">
+        <header className="app-header">
+          <div>
+            <h1>
+              Chessktop
+            </h1>
 
-          <p>
-            {selectedStudy
-              ? selectedStudy
-                .name
-              : "Selecciona un estudio"}
-          </p>
-        </div>
-      </header>
+            <p>
+              {selectedStudy
+                ? selectedStudy.name
+                : "Selecciona un estudio"}
+            </p>
+          </div>
 
-      <section className="workspace">
-        <LibrarySidebar
-          library={
-            library
-          }
-          trainings={
-            trainings
-          }
-          trainingPerformances={
-            trainingPerformances
-          }
-          selectedStudyId={
-            selectedStudyId
-          }
-          onLibraryChange={
-            handleLibraryChange
-          }
-          onStudySelect={
-            selectStudy
-          }
-          onExportLibrary={
-            handleExportLibrary
-          }
-          onImportLibrary={
-            handleImportLibrary
-          }
-          onCreateTraining={
-            handleCreateTraining
-          }
-          onOpenTraining={
-            openTraining
-          }
-          onRenameTraining={
-            handleRenameTraining
-          }
-          onDeleteTraining={
-            handleDeleteTraining
-          }
-          onImportPgn={
-            handleImportPgn
-          }
-          onExportPgn={
-            handleExportPgn
-          }
-        />
+          <button
+            type="button"
+            className="app-help-button"
+            onClick={
+              openOnboarding
+            }
+            aria-label="Abrir guía de inicio"
+            title="Guía de inicio"
+          >
+            <CircleHelp
+              size={20}
+              aria-hidden="true"
+            />
+          </button>
+        </header>
 
-        {workspace?.type ===
-          "training" &&
-          selectedTraining &&
-          trainingStudy &&
-          studyContents[
-          selectedTraining
-            .studyId
-          ] ? (
-          <TrainingWorkspace
-            key={
-              selectedTraining
-                .id
+        <section className="workspace">
+          <LibrarySidebar
+            library={
+              library
             }
-            training={
-              selectedTraining
+            trainings={
+              trainings
             }
-            studyName={
-              trainingStudy
-                .name
+            trainingPerformances={
+              trainingPerformances
             }
-            onClose={() =>
-              setWorkspace({
-                type:
-                  "study",
-
-                studyId:
-                  selectedTraining
-                    .studyId,
-              })
+            selectedStudyId={
+              selectedStudyId
             }
-            studyContent={
-              studyContents[
-              selectedTraining
-                .studyId
-              ]
+            onLibraryChange={
+              handleLibraryChange
             }
-            onAddNote={
-              openNote
+            onStudySelect={
+              selectStudy
             }
-            onSessionCompleted={
-              handleTrainingSessionCompleted
+            onExportLibrary={
+              handleExportLibrary
+            }
+            onImportLibrary={
+              handleImportLibrary
+            }
+            onCreateTraining={
+              handleCreateTraining
+            }
+            onOpenTraining={
+              openTraining
+            }
+            onRenameTraining={
+              handleRenameTraining
+            }
+            onDeleteTraining={
+              handleDeleteTraining
+            }
+            onImportPgn={
+              handleImportPgn
+            }
+            onExportPgn={
+              handleExportPgn
             }
           />
-        ) : (
-          <>
-            <div className="board-section">
+
+          {workspace?.type ===
+            "training" &&
+            selectedTraining &&
+            trainingStudy &&
+            studyContents[
+            selectedTraining
+              .studyId
+            ] ? (
+            <TrainingWorkspace
+              key={
+                selectedTraining
+                  .id
+              }
+              training={
+                selectedTraining
+              }
+              studyName={
+                trainingStudy
+                  .name
+              }
+              onClose={() =>
+                setWorkspace({
+                  type:
+                    "study",
+
+                  studyId:
+                    selectedTraining
+                      .studyId,
+                })
+              }
+              studyContent={
+                studyContents[
+                selectedTraining
+                  .studyId
+                ]
+              }
+              onAddNote={
+                openNote
+              }
+              onSessionCompleted={
+                handleTrainingSessionCompleted
+              }
+            />
+          ) : (
+            <>
               <div className="board-section">
-                <StockfishPanel
-                  fen={
-                    position
-                  }
-                  hasActiveStudy={
-                    selectedStudyId !==
-                    null
-                  }
-                />
+                <div className="board-section">
+                  <StockfishPanel
+                    fen={
+                      position
+                    }
+                    hasActiveStudy={
+                      selectedStudyId !==
+                      null
+                    }
+                  />
 
-                {/* controles */}
-              </div>
+                  {/* controles */}
+                </div>
 
-              <div className="board-container">
-                <Chessboard
-                  options={{
-                    position,
+                <div className="board-container">
+                  <Chessboard
+                    options={{
+                      position,
 
-                    onPieceDrop: ({
-                      sourceSquare,
-                      targetSquare,
-                    }) => {
-                      if (
-                        !selectedStudyId ||
-                        !targetSquare
-                      ) {
-                        showToast(
-                          "Selecciona o crea un estudio para utilizar el tablero.",
-                          3000,
-                        );
-
-                        return false;
-                      }
-
-                      return makeMove(
+                      onPieceDrop: ({
                         sourceSquare,
                         targetSquare,
-                      );
-                    },
+                      }) => {
+                        if (
+                          !selectedStudyId ||
+                          !targetSquare
+                        ) {
+                          showToast(
+                            "Selecciona o crea un estudio para utilizar el tablero.",
+                            3000,
+                          );
 
-                    boardStyle: {
-                      borderRadius:
-                        "8px",
-
-                      boxShadow:
-                        "0 8px 24px rgba(0, 0, 0, 0.16)",
-                    },
-
-                    lightSquareStyle: {
-                      backgroundColor:
-                        "#e8e1d1",
-                    },
-
-                    darkSquareStyle: {
-                      backgroundColor:
-                        "#71879a",
-                    },
-                  }}
-                />
-              </div>
-
-              <div className="board-controls">
-                <button
-                  type="button"
-                  onClick={
-                    goToStart
-                  }
-                  disabled={
-                    currentNodeId ===
-                    "root"
-                  }
-                >
-                  Inicio
-                </button>
-
-                <button
-                  type="button"
-                  onClick={
-                    goToPreviousMove
-                  }
-                  disabled={
-                    currentNodeId ===
-                    "root"
-                  }
-                >
-                  Anterior
-                </button>
-
-                <button
-                  type="button"
-                  onClick={
-                    goToNextMove
-                  }
-                  disabled={
-                    nodes[
-                      currentNodeId
-                    ]?.children
-                      .length ===
-                    0
-                  }
-                >
-                  Siguiente
-                </button>
-
-                <button
-                  type="button"
-                  onClick={
-                    deleteCurrentBranch
-                  }
-                  disabled={
-                    currentNodeId ===
-                    "root"
-                  }
-                >
-                  Borrar rama
-                </button>
-
-                <button
-                  type="button"
-                  onClick={
-                    resetGame
-                  }
-                  disabled={
-                    nodes.root
-                      .children
-                      .length ===
-                    0
-                  }
-                >
-                  Reiniciar
-                </button>
-              </div>
-            </div>
-
-            <aside className="moves-panel">
-              <h2>
-                Movimientos
-              </h2>
-
-              <div className="moves-table-header">
-                <span>
-                  N.º
-                </span>
-
-                <span>
-                  Blancas
-                </span>
-
-                <span>
-                  Negras
-                </span>
-
-                <span aria-label="Notas" />
-              </div>
-
-              {moveRows.length ===
-                0 ? (
-                <p className="empty-message">
-                  Todavía no hay movimientos.
-                </p>
-              ) : (
-                <div className="moves-table">
-                  {moveRows.map(
-                    (
-                      row,
-                    ) => (
-                      <div
-                        className="move-group"
-                        key={
-                          row.moveNumber
+                          return false;
                         }
-                      >
-                        <div className="move-row">
-                          <span className="move-number">
-                            {
-                              row.moveNumber
-                            }
-                            .
-                          </span>
 
-                          {row.whiteMove ? (
-                            <button
-                              type="button"
-                              className={`move-button ${currentNodeId ===
-                                row
-                                  .whiteMove
-                                  .id
-                                ? "active"
-                                : ""
-                                }`}
-                              onClick={() =>
-                                goToMove(
-                                  row
-                                    .whiteMove!
-                                    .id,
-                                )
-                              }
-                            >
-                              {
-                                row
-                                  .whiteMove
-                                  .san
-                              }
-                            </button>
-                          ) : (
-                            <span />
-                          )}
+                        return makeMove(
+                          sourceSquare,
+                          targetSquare,
+                        );
+                      },
 
-                          {row.blackMove ? (
-                            <button
-                              type="button"
-                              className={`move-button ${currentNodeId ===
-                                row
-                                  .blackMove
-                                  .id
-                                ? "active"
-                                : ""
-                                }`}
-                              onClick={() =>
-                                goToMove(
-                                  row
-                                    .blackMove!
-                                    .id,
-                                )
-                              }
-                            >
-                              {
-                                row
-                                  .blackMove
-                                  .san
-                              }
-                            </button>
-                          ) : (
-                            <span className="empty-black-move" />
-                          )}
+                      boardStyle: {
+                        borderRadius:
+                          "8px",
 
-                          <NoteButton
-                            node={
-                              row.blackMove ??
-                              row.whiteMove
-                            }
-                            onClick={
-                              openNote
-                            }
-                          />
-                        </div>
+                        boxShadow:
+                          "0 8px 24px rgba(0, 0, 0, 0.16)",
+                      },
 
-                        {row
-                          .whiteMove
-                          ?.children
-                          .slice(1)
-                          .map(
-                            (
-                              variationId,
-                            ) => (
-                              <VariationLine
-                                key={
-                                  variationId
-                                }
-                                firstNodeId={
-                                  variationId
-                                }
-                                nodes={
-                                  nodes
-                                }
-                                currentNodeId={
-                                  currentNodeId
-                                }
-                                onMoveClick={
-                                  goToMove
-                                }
-                                onNoteClick={
-                                  openNote
-                                }
-                              />
-                            ),
-                          )}
+                      lightSquareStyle: {
+                        backgroundColor:
+                          "#e8e1d1",
+                      },
 
-                        {row
-                          .blackMove
-                          ?.children
-                          .slice(1)
-                          .map(
-                            (
-                              variationId,
-                            ) => (
-                              <VariationLine
-                                key={
-                                  variationId
-                                }
-                                firstNodeId={
-                                  variationId
-                                }
-                                nodes={
-                                  nodes
-                                }
-                                currentNodeId={
-                                  currentNodeId
-                                }
-                                onMoveClick={
-                                  goToMove
-                                }
-                                onNoteClick={
-                                  openNote
-                                }
-                              />
-                            ),
-                          )}
-                      </div>
-                    ),
-                  )}
+                      darkSquareStyle: {
+                        backgroundColor:
+                          "#71879a",
+                      },
+                    }}
+                  />
                 </div>
-              )}
 
-              <div className="position-information">
-                <h3>
-                  Posición actual
-                </h3>
-
-                <p>
-                  Turno:{" "}
-                  <strong>
-                    {game.turn() ===
-                      "w"
-                      ? "Blancas"
-                      : "Negras"}
-                  </strong>
-                </p>
-
-                <p>
-                  Jugada seleccionada:{" "}
-                  <strong>
-                    {currentNodeId ===
+                <div className="board-controls">
+                  <button
+                    type="button"
+                    onClick={
+                      goToStart
+                    }
+                    disabled={
+                      currentNodeId ===
                       "root"
-                      ? "Posición inicial"
-                      : `${Math.ceil(
-                        currentNode
-                          .ply /
+                    }
+                  >
+                    Inicio
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      goToPreviousMove
+                    }
+                    disabled={
+                      currentNodeId ===
+                      "root"
+                    }
+                  >
+                    Anterior
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      goToNextMove
+                    }
+                    disabled={
+                      nodes[
+                        currentNodeId
+                      ]?.children
+                        .length ===
+                      0
+                    }
+                  >
+                    Siguiente
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      deleteCurrentBranch
+                    }
+                    disabled={
+                      currentNodeId ===
+                      "root"
+                    }
+                  >
+                    Borrar rama
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={
+                      resetGame
+                    }
+                    disabled={
+                      nodes.root
+                        .children
+                        .length ===
+                      0
+                    }
+                  >
+                    Reiniciar
+                  </button>
+                </div>
+              </div>
+
+              <aside className="moves-panel">
+                <h2>
+                  Movimientos
+                </h2>
+
+                <div className="moves-table-header">
+                  <span>
+                    N.º
+                  </span>
+
+                  <span>
+                    Blancas
+                  </span>
+
+                  <span>
+                    Negras
+                  </span>
+
+                  <span aria-label="Notas" />
+                </div>
+
+                {moveRows.length ===
+                  0 ? (
+                  <p className="empty-message">
+                    Todavía no hay movimientos.
+                  </p>
+                ) : (
+                  <div className="moves-table">
+                    {moveRows.map(
+                      (
+                        row,
+                      ) => (
+                        <div
+                          className="move-group"
+                          key={
+                            row.moveNumber
+                          }
+                        >
+                          <div className="move-row">
+                            <span className="move-number">
+                              {
+                                row.moveNumber
+                              }
+                              .
+                            </span>
+
+                            {row.whiteMove ? (
+                              <button
+                                type="button"
+                                className={`move-button ${currentNodeId ===
+                                  row
+                                    .whiteMove
+                                    .id
+                                  ? "active"
+                                  : ""
+                                  }`}
+                                onClick={() =>
+                                  goToMove(
+                                    row
+                                      .whiteMove!
+                                      .id,
+                                  )
+                                }
+                              >
+                                {
+                                  row
+                                    .whiteMove
+                                    .san
+                                }
+                              </button>
+                            ) : (
+                              <span />
+                            )}
+
+                            {row.blackMove ? (
+                              <button
+                                type="button"
+                                className={`move-button ${currentNodeId ===
+                                  row
+                                    .blackMove
+                                    .id
+                                  ? "active"
+                                  : ""
+                                  }`}
+                                onClick={() =>
+                                  goToMove(
+                                    row
+                                      .blackMove!
+                                      .id,
+                                  )
+                                }
+                              >
+                                {
+                                  row
+                                    .blackMove
+                                    .san
+                                }
+                              </button>
+                            ) : (
+                              <span className="empty-black-move" />
+                            )}
+
+                            <NoteButton
+                              node={
+                                row.blackMove ??
+                                row.whiteMove
+                              }
+                              onClick={
+                                openNote
+                              }
+                            />
+                          </div>
+
+                          {row
+                            .whiteMove
+                            ?.children
+                            .slice(1)
+                            .map(
+                              (
+                                variationId,
+                              ) => (
+                                <VariationLine
+                                  key={
+                                    variationId
+                                  }
+                                  firstNodeId={
+                                    variationId
+                                  }
+                                  nodes={
+                                    nodes
+                                  }
+                                  currentNodeId={
+                                    currentNodeId
+                                  }
+                                  onMoveClick={
+                                    goToMove
+                                  }
+                                  onNoteClick={
+                                    openNote
+                                  }
+                                />
+                              ),
+                            )}
+
+                          {row
+                            .blackMove
+                            ?.children
+                            .slice(1)
+                            .map(
+                              (
+                                variationId,
+                              ) => (
+                                <VariationLine
+                                  key={
+                                    variationId
+                                  }
+                                  firstNodeId={
+                                    variationId
+                                  }
+                                  nodes={
+                                    nodes
+                                  }
+                                  currentNodeId={
+                                    currentNodeId
+                                  }
+                                  onMoveClick={
+                                    goToMove
+                                  }
+                                  onNoteClick={
+                                    openNote
+                                  }
+                                />
+                              ),
+                            )}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
+
+                <div className="position-information">
+                  <h3>
+                    Posición actual
+                  </h3>
+
+                  <p>
+                    Turno:{" "}
+                    <strong>
+                      {game.turn() ===
+                        "w"
+                        ? "Blancas"
+                        : "Negras"}
+                    </strong>
+                  </p>
+
+                  <p>
+                    Jugada seleccionada:{" "}
+                    <strong>
+                      {currentNodeId ===
+                        "root"
+                        ? "Posición inicial"
+                        : `${Math.ceil(
+                          currentNode
+                            .ply /
+                          2,
+                        )}${currentNode
+                          .ply %
+                          2 ===
+                          1
+                          ? "."
+                          : "..."
+                        } ${currentNode.san}`}
+                    </strong>
+                  </p>
+                </div>
+              </aside>
+            </>
+          )}
+        </section>
+
+        {noteNodeId &&
+          nodes[
+          noteNodeId
+          ] && (
+            <div
+              className="note-overlay"
+              onMouseDown={(
+                event,
+              ) => {
+                if (
+                  event.target ===
+                  event.currentTarget
+                ) {
+                  closeNote();
+                }
+              }}
+            >
+              <section
+                className="note-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="note-title"
+              >
+                <header className="note-dialog-header">
+                  <div>
+                    <span className="note-dialog-label">
+                      Apunte del movimiento
+                    </span>
+
+                    <h2 id="note-title">
+                      {Math.ceil(
+                        nodes[
+                          noteNodeId
+                        ].ply /
                         2,
-                      )}${currentNode
-                        .ply %
+                      )}
+
+                      {nodes[
+                        noteNodeId
+                      ].ply %
                         2 ===
                         1
                         ? "."
-                        : "..."
-                      } ${currentNode.san}`}
-                  </strong>
-                </p>
-              </div>
-            </aside>
-          </>
-        )}
-      </section>
+                        : "..."}{" "}
 
-      {noteNodeId &&
-        nodes[
-        noteNodeId
-        ] && (
-          <div
-            className="note-overlay"
-            onMouseDown={(
-              event,
-            ) => {
-              if (
-                event.target ===
-                event.currentTarget
-              ) {
-                closeNote();
-              }
-            }}
-          >
-            <section
-              className="note-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="note-title"
-            >
-              <header className="note-dialog-header">
-                <div>
-                  <span className="note-dialog-label">
-                    Apunte del movimiento
-                  </span>
-
-                  <h2 id="note-title">
-                    {Math.ceil(
-                      nodes[
-                        noteNodeId
-                      ].ply /
-                      2,
-                    )}
-
-                    {nodes[
-                      noteNodeId
-                    ].ply %
-                      2 ===
-                      1
-                      ? "."
-                      : "..."}{" "}
-
-                    {
-                      nodes[
-                        noteNodeId
-                      ].san
-                    }
-                  </h2>
-                </div>
-
-                <button
-                  type="button"
-                  className="note-close-button"
-                  onClick={
-                    closeNote
-                  }
-                  aria-label="Cerrar nota"
-                >
-                  <X
-                    size={19}
-                    aria-hidden="true"
-                  />
-                </button>
-              </header>
-
-              <textarea
-                className="note-textarea"
-                value={
-                  noteDraft
-                }
-                onChange={(
-                  event,
-                ) =>
-                  setNoteDraft(
-                    event.target
-                      .value,
-                  )
-                }
-                placeholder="Escribe aquí tus ideas, planes, errores frecuentes o recordatorios..."
-                autoFocus
-              />
-
-              <footer className="note-dialog-actions">
-                {nodes[
-                  noteNodeId
-                ].note && (
-                    <button
-                      type="button"
-                      className="note-delete-button"
-                      onClick={
-                        deleteNote
+                      {
+                        nodes[
+                          noteNodeId
+                        ].san
                       }
-                    >
-                      Borrar nota
-                    </button>
-                  )}
+                    </h2>
+                  </div>
 
-                <div className="note-main-actions">
                   <button
                     type="button"
-                    className="note-cancel-button"
+                    className="note-close-button"
                     onClick={
                       closeNote
                     }
+                    aria-label="Cerrar nota"
                   >
-                    Cancelar
+                    <X
+                      size={19}
+                      aria-hidden="true"
+                    />
                   </button>
+                </header>
 
-                  <button
-                    type="button"
-                    className="note-save-button"
-                    onClick={
-                      saveNote
-                    }
-                  >
-                    Guardar
-                  </button>
-                </div>
-              </footer>
-            </section>
-          </div>
-        )}
+                <textarea
+                  className="note-textarea"
+                  value={
+                    noteDraft
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setNoteDraft(
+                      event.target
+                        .value,
+                    )
+                  }
+                  placeholder="Escribe aquí tus ideas, planes, errores frecuentes o recordatorios..."
+                  autoFocus
+                />
 
-      <Toast
-        message={
-          toastMessage
+                <footer className="note-dialog-actions">
+                  {nodes[
+                    noteNodeId
+                  ].note && (
+                      <button
+                        type="button"
+                        className="note-delete-button"
+                        onClick={
+                          deleteNote
+                        }
+                      >
+                        Borrar nota
+                      </button>
+                    )}
+
+                  <div className="note-main-actions">
+                    <button
+                      type="button"
+                      className="note-cancel-button"
+                      onClick={
+                        closeNote
+                      }
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="button"
+                      className="note-save-button"
+                      onClick={
+                        saveNote
+                      }
+                    >
+                      Guardar
+                    </button>
+                  </div>
+                </footer>
+              </section>
+            </div>
+          )}
+
+        <Toast
+          message={
+            toastMessage
+          }
+          visible={
+            toastVisible
+          }
+        />
+      </main>
+      <Onboarding
+        open={
+          onboardingOpen
         }
-        visible={
-          toastVisible
+        onComplete={
+          completeOnboarding
         }
-      />
-    </main>
+        onClose={
+          closeOnboarding
+        }
+      /></>
   );
 }
 
