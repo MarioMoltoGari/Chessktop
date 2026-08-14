@@ -1546,12 +1546,16 @@ export default function LibrarySidebar({
 
     return (
         <aside
-            className={`library-sidebar ${deleteMode ? "delete-mode" : ""
+            className={`library-sidebar ${deleteMode
+                ? "delete-mode"
+                : ""
                 }`}
         >
             <div className="library-sidebar-header">
                 <div>
-                    <h2>Biblioteca</h2>
+                    <h2>
+                        Biblioteca
+                    </h2>
 
                     <p>
                         {deleteMode
@@ -1564,16 +1568,28 @@ export default function LibrarySidebar({
                     <div className="library-header-actions">
                         <button
                             type="button"
-                            onClick={() => createFolder(null)}
-                            disabled={deleteMode}
+                            onClick={() =>
+                                createFolder(
+                                    null,
+                                )
+                            }
+                            disabled={
+                                deleteMode
+                            }
                         >
                             + Carpeta
                         </button>
 
                         <button
                             type="button"
-                            onClick={() => createStudy(null)}
-                            disabled={deleteMode}
+                            onClick={() =>
+                                createStudy(
+                                    null,
+                                )
+                            }
+                            disabled={
+                                deleteMode
+                            }
                         >
                             + Estudio
                         </button>
@@ -1581,11 +1597,16 @@ export default function LibrarySidebar({
 
                     <button
                         type="button"
-                        className={`library-delete-mode-button ${deleteMode ? "active" : ""
+                        className={`library-delete-mode-button ${deleteMode
+                            ? "active"
+                            : ""
                             }`}
                         onClick={() =>
                             setDeleteMode(
-                                (currentMode) => !currentMode,
+                                (
+                                    currentMode,
+                                ) =>
+                                    !currentMode,
                             )
                         }
                     >
@@ -1601,88 +1622,159 @@ export default function LibrarySidebar({
                 className="library-search"
                 value={search}
                 onChange={(event) =>
-                    setSearch(event.target.value)
+                    setSearch(
+                        event.target.value,
+                    )
                 }
                 placeholder="Buscar estudios..."
-                disabled={deleteMode}
+                disabled={
+                    deleteMode
+                }
             />
 
             <div className="library-tree">
-                {rootFolders.map((folder) => (
-                    <FolderNode
-                        key={folder.id}
-                        folder={folder}
-                        folders={library.folders}
-                        trainingPerformances={
-                            trainingPerformances
-                        }
-                        studies={visibleStudies}
-                        selectedStudyId={selectedStudyId}
-                        depth={0}
-                        deleteMode={deleteMode}
-                        onToggleFolder={toggleFolder}
-                        onSelectStudy={(studyId) =>
-                            onStudySelect(studyId)
-                        }
-                        onCreateFolder={createFolder}
-                        onCreateStudy={createStudy}
-                        onDeleteFolder={deleteFolder}
-                        onDeleteStudy={deleteStudy}
-                        onOpenContextMenu={openContextMenu}
-                        trainings={trainings}
-                        onOpenTraining={onOpenTraining}
-                    />
-                ))}
-
-                {rootStudies.map((study) => {
-                    const studyTrainings =
-                        Object.values(
-                            trainings,
-                        ).filter(
-                            (training) =>
-                                training.studyId ===
-                                study.id,
-                        );
-
-                    return (
-                        <StudyNode
-                            key={study.id}
-                            study={study}
-                            trainings={
-                                studyTrainings
-                            }
-                            selectedStudyId={
-                                selectedStudyId
-                            }
-                            trainingPerformances={
-                                trainingPerformances
-                            }
-                            depth={0}
-                            deleteMode={
-                                deleteMode
-                            }
-                            onSelectStudy={
-                                onStudySelect
-                            }
-                            onDeleteStudy={
-                                deleteStudy
-                            }
-                            onOpenContextMenu={
-                                openContextMenu
-                            }
-                            onOpenTraining={onOpenTraining}
+                {library.folders.length ===
+                    0 &&
+                    library.studies.length ===
+                    0 ? (
+                    <div className="library-empty-state">
+                        <BookOpen
+                            size={24}
+                            aria-hidden="true"
                         />
-                    );
-                })}
 
-                {library.folders.length === 0 &&
-                    library.studies.length === 0 && (
-                        <p className="library-empty">
-                            Crea una carpeta o un estudio para
-                            empezar.
+                        <p>
+                            Tu biblioteca está vacía.
                         </p>
-                    )}
+
+                        <span>
+                            Crea una carpeta o un estudio para empezar.
+                        </span>
+                    </div>
+                ) : (
+                    <>
+                        {rootFolders.map(
+                            (
+                                folder,
+                            ) => (
+                                <FolderNode
+                                    key={
+                                        folder.id
+                                    }
+                                    folder={
+                                        folder
+                                    }
+                                    folders={
+                                        library.folders
+                                    }
+                                    trainingPerformances={
+                                        trainingPerformances
+                                    }
+                                    studies={
+                                        visibleStudies
+                                    }
+                                    selectedStudyId={
+                                        selectedStudyId
+                                    }
+                                    depth={
+                                        0
+                                    }
+                                    deleteMode={
+                                        deleteMode
+                                    }
+                                    onToggleFolder={
+                                        toggleFolder
+                                    }
+                                    onSelectStudy={(
+                                        studyId,
+                                    ) =>
+                                        onStudySelect(
+                                            studyId,
+                                        )
+                                    }
+                                    onCreateFolder={
+                                        createFolder
+                                    }
+                                    onCreateStudy={
+                                        createStudy
+                                    }
+                                    onDeleteFolder={
+                                        deleteFolder
+                                    }
+                                    onDeleteStudy={
+                                        deleteStudy
+                                    }
+                                    onOpenContextMenu={
+                                        openContextMenu
+                                    }
+                                    trainings={
+                                        trainings
+                                    }
+                                    onOpenTraining={
+                                        onOpenTraining
+                                    }
+                                />
+                            ),
+                        )}
+
+                        {rootStudies.map(
+                            (
+                                study,
+                            ) => {
+                                const studyTrainings =
+                                    Object.values(
+                                        trainings,
+                                    ).filter(
+                                        (
+                                            training,
+                                        ) =>
+                                            training.studyId ===
+                                            study.id,
+                                    );
+
+                                return (
+                                    <StudyNode
+                                        key={
+                                            study.id
+                                        }
+                                        study={
+                                            study
+                                        }
+                                        trainings={
+                                            studyTrainings
+                                        }
+                                        selectedStudyId={
+                                            selectedStudyId
+                                        }
+                                        trainingPerformances={
+                                            trainingPerformances
+                                        }
+                                        depth={
+                                            0
+                                        }
+                                        deleteMode={
+                                            deleteMode
+                                        }
+                                        onSelectStudy={
+                                            onStudySelect
+                                        }
+                                        onDeleteStudy={
+                                            deleteStudy
+                                        }
+                                        onOpenContextMenu={
+                                            openContextMenu
+                                        }
+                                        onOpenTraining={
+                                            onOpenTraining
+                                        }
+                                    />
+                                );
+                            },
+                        )}
+                    </>
+                )}
             </div>
+
             <div className="library-footer">
                 <div className="library-footer-group">
                     <span className="library-footer-label">
@@ -1694,7 +1786,9 @@ export default function LibrarySidebar({
                             type="button"
                             className="library-import-button"
                             onClick={() =>
-                                importInputRef.current?.click()
+                                importInputRef
+                                    .current
+                                    ?.click()
                             }
                         >
                             Importar
@@ -1703,7 +1797,9 @@ export default function LibrarySidebar({
                         <button
                             type="button"
                             className="library-export-button"
-                            onClick={onExportLibrary}
+                            onClick={
+                                onExportLibrary
+                            }
                         >
                             Exportar
                         </button>
@@ -1720,7 +1816,9 @@ export default function LibrarySidebar({
                             className="library-import-button"
                             type="button"
                             onClick={() =>
-                                pgnInputRef.current?.click()
+                                pgnInputRef
+                                    .current
+                                    ?.click()
                             }
                         >
                             Importar
@@ -1729,8 +1827,12 @@ export default function LibrarySidebar({
                         <button
                             className="library-import-button"
                             type="button"
-                            onClick={onExportPgn}
-                            disabled={!selectedStudyId}
+                            onClick={
+                                onExportPgn
+                            }
+                            disabled={
+                                !selectedStudyId
+                            }
                         >
                             Exportar
                         </button>
@@ -1738,39 +1840,52 @@ export default function LibrarySidebar({
                 </div>
 
                 <input
-                    ref={importInputRef}
+                    ref={
+                        importInputRef
+                    }
                     type="file"
                     accept=".json,application/json"
                     className="library-file-input"
                     onChange={(event) => {
                         const file =
-                            event.target.files?.[0];
+                            event.target
+                                .files?.[0];
 
                         if (file) {
-                            onImportLibrary(file);
+                            onImportLibrary(
+                                file,
+                            );
                         }
 
-                        event.target.value = "";
+                        event.target.value =
+                            "";
                     }}
                 />
 
                 <input
-                    ref={pgnInputRef}
+                    ref={
+                        pgnInputRef
+                    }
                     type="file"
                     accept=".pgn,application/x-chess-pgn"
                     className="library-file-input"
                     onChange={(event) => {
                         const file =
-                            event.target.files?.[0];
+                            event.target
+                                .files?.[0];
 
                         if (file) {
-                            onImportPgn(file);
+                            onImportPgn(
+                                file,
+                            );
                         }
 
-                        event.target.value = "";
+                        event.target.value =
+                            "";
                     }}
                 />
             </div>
+
             {trainingStudy && (
                 <CreateTrainingDialog
                     open
@@ -1778,7 +1893,9 @@ export default function LibrarySidebar({
                         trainingStudy.name
                     }
                     onCancel={() =>
-                        setTrainingStudyId(null)
+                        setTrainingStudyId(
+                            null,
+                        )
                     }
                     onCreate={(data) => {
                         onCreateTraining(
@@ -1789,41 +1906,63 @@ export default function LibrarySidebar({
                             data.order,
                         );
 
-                        setTrainingStudyId(null);
+                        setTrainingStudyId(
+                            null,
+                        );
                     }}
                 />
             )}
+
             {contextMenu && (
                 <ContextMenu
-                    x={contextMenu.x}
-                    y={contextMenu.y}
-                    items={getContextMenuItems()}
+                    x={
+                        contextMenu.x
+                    }
+                    y={
+                        contextMenu.y
+                    }
+                    items={
+                        getContextMenuItems()
+                    }
                     onClose={() =>
-                        setContextMenu(null)
+                        setContextMenu(
+                            null,
+                        )
                     }
                 />
             )}
+
             {moveTarget && (
                 <MoveLibraryItemDialog
                     open
                     title={
-                        moveTarget.type === "folder"
+                        moveTarget.type ===
+                            "folder"
                             ? "Mover carpeta"
                             : "Mover estudio"
                     }
-                    folders={library.folders}
+                    folders={
+                        library.folders
+                    }
                     currentFolderId={
-                        moveTarget.type === "folder"
+                        moveTarget.type ===
+                            "folder"
                             ? library.folders.find(
-                                (folder) =>
+                                (
+                                    folder,
+                                ) =>
                                     folder.id ===
                                     moveTarget.id,
-                            )?.parentId ?? null
+                            )?.parentId ??
+                            null
                             : library.studies.find(
-                                (study) =>
+                                (
+                                    study,
+                                ) =>
                                     study.id ===
                                     moveTarget.id,
-                            )?.folderId ?? null
+                            )?.folderId ??
+                            null
                     }
                     excludedFolderIds={
                         getMoveExcludedFolderIds()
@@ -1847,7 +1986,9 @@ export default function LibrarySidebar({
                         }
                     }}
                     onCancel={() =>
-                        setMoveTarget(null)
+                        setMoveTarget(
+                            null,
+                        )
                     }
                 />
             )}

@@ -191,6 +191,9 @@ export default function StockfishPanel({
           expectedLines={
             multiPv
           }
+          fen={
+            fen
+          }
         />
       )}
     </section>
