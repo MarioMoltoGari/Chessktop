@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@echecs/pgn": "^5.0.0",
+    "@vercel/analytics": "^2.0.1",
     "chess.js": "^1.4.0",
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",
