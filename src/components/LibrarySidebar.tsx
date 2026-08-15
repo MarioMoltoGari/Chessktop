@@ -9,6 +9,7 @@ import {
     FolderOpen,
     FolderPlus,
     Trash2,
+    Ellipsis
 } from "lucide-react";
 import type {
     ChessStudy,
@@ -213,10 +214,8 @@ function StudyNode({
 }: StudyNodeProps) {
     return (
         <div className="library-study-node">
-            <button
-                type="button"
-                className={`library-study-row ${selectedStudyId === study.id
-                    ? "active"
+            <div
+                className={`library-study-row ${selectedStudyId === study.id ? "active"
                     : ""
                     } ${deleteMode
                         ? "delete-mode"
@@ -258,7 +257,32 @@ function StudyNode({
                 </span>
 
                 <span>{study.name}</span>
-            </button>
+                {!deleteMode && (
+                    <button
+                        type="button"
+                        className="library-item-menu-button"
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+
+                            onOpenContextMenu(
+                                event,
+                                {
+                                    type: "study",
+                                    id: study.id,
+                                },
+                            );
+                        }}
+                        aria-label={`Opciones de ${study.name}`}
+                        title="Más opciones"
+                    >
+                        <Ellipsis
+                            size={17}
+                            aria-hidden="true"
+                        />
+                    </button>
+                )}
+            </div>
 
             {!deleteMode &&
                 trainings.map(
@@ -281,11 +305,8 @@ function StudyNode({
                             );
 
                         return (
-                            <button
-                                key={
-                                    training.id
-                                }
-                                type="button"
+                            <div
+                                key={training.id}
                                 className="library-training-row"
                                 style={{
                                     paddingLeft:
@@ -343,7 +364,30 @@ function StudyNode({
                                             ` · ${lastTraining}`}
                                     </span>
                                 </span>
-                            </button>
+                                <button
+                                    type="button"
+                                    className="library-item-menu-button"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+
+                                        onOpenContextMenu(
+                                            event,
+                                            {
+                                                type: "training",
+                                                id: training.id,
+                                            },
+                                        );
+                                    }}
+                                    aria-label={`Opciones de ${training.name}`}
+                                    title="Más opciones"
+                                >
+                                    <Ellipsis
+                                        size={17}
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </div>
                         );
                     },
                 )}
@@ -476,6 +520,29 @@ function FolderNode({
                         >
                             <FilePlus2
                                 size={15}
+                                aria-hidden="true"
+                            />
+                        </button>
+                        <button
+                            type="button"
+                            className="library-item-menu-button"
+                            onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                onOpenContextMenu(
+                                    event,
+                                    {
+                                        type: "folder",
+                                        id: folder.id,
+                                    },
+                                );
+                            }}
+                            aria-label={`Opciones de ${folder.name}`}
+                            title="Más opciones"
+                        >
+                            <Ellipsis
+                                size={17}
                                 aria-hidden="true"
                             />
                         </button>
