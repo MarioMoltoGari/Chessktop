@@ -272,6 +272,27 @@ function getStudyNameFromPgnFile(
   );
 }
 
+function serializePgnComment(
+  note: string,
+): string {
+  const normalizedNote =
+    note
+      .trim()
+      .replace(
+        /[{}]/g,
+        "",
+      )
+      .replace(
+        /\s+/g,
+        " ",
+      )
+      .trim();
+
+  return normalizedNote
+    ? ` {${normalizedNote}}`
+    : "";
+}
+
 /*
  * Convierte el árbol de movimientos
  * a PGN incluyendo variantes.
@@ -323,9 +344,14 @@ function createPgn(
       );
 
     let result =
-      prefix
-        ? `${prefix} ${mainMove.san}`
-        : mainMove.san;
+      (
+        prefix
+          ? `${prefix} ${mainMove.san}`
+          : mainMove.san
+      ) +
+      serializePgnComment(
+        mainMove.note,
+      );
 
     for (
       const variationId
@@ -378,9 +404,14 @@ function createPgn(
       );
 
     let result =
-      prefix
-        ? `${prefix} ${firstNode.san}`
-        : firstNode.san;
+      (
+        prefix
+          ? `${prefix} ${firstNode.san}`
+          : firstNode.san
+      ) +
+      serializePgnComment(
+        firstNode.note,
+      );
 
     const continuation =
       serializePosition(
@@ -972,6 +1003,17 @@ function AppContent() {
     setNoteDraft,
   ] =
     useState("");
+
+  const [
+    noteChoice,
+    setNoteChoice,
+  ] =
+    useState<{
+      whiteMove?: MoveNode;
+      blackMove?: MoveNode;
+    } | null>(
+      null,
+    );
 
   const [
     toastMessage,
@@ -2201,6 +2243,51 @@ function AppContent() {
     );
   }
 
+  function openRowNote(
+    whiteMove?: MoveNode,
+    blackMove?: MoveNode,
+  ) {
+    /*
+     * Si la fila solo contiene un movimiento,
+     * no necesitamos preguntar nada.
+     */
+    if (
+      whiteMove &&
+      !blackMove
+    ) {
+      openNote(
+        whiteMove.id,
+      );
+
+      return;
+    }
+
+    if (
+      blackMove &&
+      !whiteMove
+    ) {
+      openNote(
+        blackMove.id,
+      );
+
+      return;
+    }
+
+    /*
+     * Si existen blanca y negra,
+     * mostramos un selector pequeño.
+     */
+    if (
+      whiteMove &&
+      blackMove
+    ) {
+      setNoteChoice({
+        whiteMove,
+        blackMove,
+      });
+    }
+  }
+
   function openNote(
     nodeId: string,
   ) {
@@ -2212,6 +2299,10 @@ function AppContent() {
     if (!node) {
       return;
     }
+
+    setNoteChoice(
+      null,
+    );
 
     setNoteNodeId(
       nodeId,
@@ -3197,8 +3288,11 @@ function AppContent() {
                                 row.blackMove ??
                                 row.whiteMove
                               }
-                              onClick={
-                                openNote
+                              onClick={() =>
+                                openRowNote(
+                                  row.whiteMove,
+                                  row.blackMove,
+                                )
                               }
                             />
                           </div>
@@ -3310,6 +3404,138 @@ function AppContent() {
           )}
         </section>
 
+        {noteChoice && (
+          <div
+            className="note-choice-overlay"
+            onMouseDown={(
+              event,
+            ) => {
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
+                setNoteChoice(
+                  null,
+                );
+              }
+            }}
+          >
+            <section
+              className="note-choice-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="note-choice-title"
+            >
+              <header className="note-choice-header">
+                <div>
+                  <span className="note-dialog-label">
+                    Apunte
+                  </span>
+
+                  <h2 id="note-choice-title">
+                    ¿A qué movimiento quieres añadir la nota?
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  className="note-close-button"
+                  onClick={() =>
+                    setNoteChoice(
+                      null,
+                    )
+                  }
+                  aria-label="Cerrar"
+                >
+                  <X
+                    size={19}
+                    aria-hidden="true"
+                  />
+                </button>
+              </header>
+
+              <div className="note-choice-options">
+                {noteChoice.whiteMove && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openNote(
+                        noteChoice
+                          .whiteMove!
+                          .id,
+                      )
+                    }
+                  >
+                    <span>
+                      {Math.ceil(
+                        noteChoice
+                          .whiteMove
+                          .ply /
+                        2,
+                      )}
+                      .
+                    </span>
+
+                    <strong>
+                      {
+                        noteChoice
+                          .whiteMove
+                          .san
+                      }
+                    </strong>
+
+                    {noteChoice
+                      .whiteMove
+                      .note && (
+                        <small>
+                          Tiene nota
+                        </small>
+                      )}
+                  </button>
+                )}
+
+                {noteChoice.blackMove && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openNote(
+                        noteChoice
+                          .blackMove!
+                          .id,
+                      )
+                    }
+                  >
+                    <span>
+                      {Math.ceil(
+                        noteChoice
+                          .blackMove
+                          .ply /
+                        2,
+                      )}
+                      ...
+                    </span>
+
+                    <strong>
+                      {
+                        noteChoice
+                          .blackMove
+                          .san
+                      }
+                    </strong>
+
+                    {noteChoice
+                      .blackMove
+                      .note && (
+                        <small>
+                          Tiene nota
+                        </small>
+                      )}
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
         {noteNodeId &&
           nodes[
           noteNodeId
