@@ -4287,3 +4287,112 @@ textarea,
         width: 100%;
     }
 }
+
+.note-choice-overlay {
+    position: fixed;
+    z-index: 1100;
+    inset: 0;
+
+    display: grid;
+    place-items: center;
+
+    padding: 24px;
+
+    background: rgba(24, 27, 23, 0.48);
+    backdrop-filter: blur(2px);
+}
+
+.note-choice-dialog {
+    width: min(430px, 100%);
+
+    overflow: hidden;
+
+    border: 1px solid #d3d6cf;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.22);
+}
+
+.note-choice-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 18px;
+
+    padding: 18px 20px;
+
+    border-bottom: 1px solid #e5e6e2;
+}
+
+.note-choice-header h2 {
+    margin: 4px 0 0;
+
+    color: #252824;
+
+    font-size: 1.05rem;
+    line-height: 1.35;
+}
+
+.note-choice-options {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+
+    padding: 18px;
+}
+
+.note-choice-options button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 3px;
+
+    min-height: 82px;
+
+    padding: 14px;
+
+    border: 1px solid #d7dcdf;
+    border-radius: 8px;
+
+    background: #ffffff;
+    color: #363e44;
+
+    text-align: left;
+
+    cursor: pointer;
+}
+
+.note-choice-options button:hover {
+    border-color: var(--color-primary);
+
+    background:
+        var(--color-primary-soft);
+}
+
+.note-choice-options button>span {
+    color: #7d858b;
+
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
+.note-choice-options button>strong {
+    font-size: 1rem;
+}
+
+.note-choice-options button>small {
+    margin-top: 3px;
+
+    color: var(--color-primary-text);
+
+    font-size: 0.72rem;
+    font-weight: 650;
+}
