@@ -3,6 +3,7 @@ import {
     type MouseEvent,
     type ReactNode,
 } from "react";
+import { t } from "../../i18n";
 
 type ModalProps = {
     open: boolean;
@@ -90,7 +91,7 @@ export default function Modal({
                         type="button"
                         className="modal-close-button"
                         onClick={onClose}
-                        aria-label="Cerrar"
+                        aria-label={t("app.dialog.close")}
                     >
                         ×
                     </button>

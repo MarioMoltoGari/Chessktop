@@ -1,6 +1,7 @@
 import {
   useState,
 } from "react";
+import { t } from "../../i18n";
 
 import {
   useStockfish,
@@ -91,12 +92,12 @@ export default function StockfishPanel({
           }
         >
           {enabled
-            ? "Motor activo"
-            : "Motor pausado"}
+            ? t("engine.power.active")
+            : t("engine.power.paused")}
         </button>
 
         <span className="engine-depth-status">
-          Prof.{" "}
+          {t("engine.depth")}{" "}
 
           <strong>
             {currentDepth ||
@@ -141,23 +142,23 @@ export default function StockfishPanel({
         <span className="engine-status-text">
           {status ===
             "loading" &&
-            "Cargando"}
+            t("engine.loading")}
 
           {status ===
             "analyzing" &&
-            "Analizando"}
+            t("engine.analyzing")}
 
           {status ===
             "ready" &&
-            "Listo"}
+            t("engine.ready")}
 
           {status ===
             "paused" &&
-            "Pausado"}
+            t("engine.paused")}
 
           {status ===
             "error" &&
-            "Error"}
+            t("engine.error")}
         </span>
       </div>
 
@@ -165,7 +166,7 @@ export default function StockfishPanel({
         <div className="engine-error-container">
           <div className="engine-error-content">
             <strong>
-              Stockfish no está disponible
+              {t("engine.unavailable")}
             </strong>
 
             <span>
@@ -180,7 +181,7 @@ export default function StockfishPanel({
               retry
             }
           >
-            Reintentar motor
+            {t("engine.retry")}
           </button>
         </div>
       ) : (

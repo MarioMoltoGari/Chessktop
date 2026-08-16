@@ -1,15 +1,19 @@
-import { useMemo, useState, useRef } from "react";
+import {
+    useMemo,
+    useState,
+    useRef
+} from "react";
 import {
     BookOpen,
     ChevronDown,
     ChevronRight,
     Dumbbell,
+    Ellipsis,
     FilePlus2,
     Folder,
     FolderOpen,
     FolderPlus,
     Trash2,
-    Ellipsis
 } from "lucide-react";
 import type {
     ChessStudy,
@@ -35,6 +39,7 @@ import {
     getHistoricalAccuracy,
 } from "./training/trainingPerformance";
 import CreateTrainingDialog from "./training/CreateTrainingDialog";
+import { t } from "../i18n";
 
 type LibrarySidebarProps = {
     library: LibraryState;
@@ -173,7 +178,7 @@ function formatLastTrainingDate(
         dateKey ===
         todayKey
     ) {
-        return "Hoy";
+        return t("common.today");
     }
 
     const yesterday =
@@ -187,7 +192,7 @@ function formatLastTrainingDate(
         dateKey ===
         yesterday.toDateString()
     ) {
-        return "Ayer";
+        return t("common.yesterday");
     }
 
     return date.toLocaleDateString(
@@ -215,7 +220,9 @@ function StudyNode({
     return (
         <div className="library-study-node">
             <div
-                className={`library-study-row ${selectedStudyId === study.id ? "active"
+                className={`library-study-row ${selectedStudyId === study.id
+                    ? "active"
+
                     : ""
                     } ${deleteMode
                         ? "delete-mode"
@@ -257,6 +264,7 @@ function StudyNode({
                 </span>
 
                 <span>{study.name}</span>
+
                 {!deleteMode && (
                     <button
                         type="button"
@@ -273,8 +281,9 @@ function StudyNode({
                                 },
                             );
                         }}
-                        aria-label={`Opciones de ${study.name}`}
-                        title="Más opciones"
+                        aria-label={study.name}
+                        title={study.name}
+
                     >
                         <Ellipsis
                             size={17}
@@ -307,6 +316,7 @@ function StudyNode({
                         return (
                             <div
                                 key={training.id}
+
                                 className="library-training-row"
                                 style={{
                                     paddingLeft:
@@ -352,18 +362,19 @@ function StudyNode({
                                         {performance
                                             ? `${performance.totalSessions} ${performance.totalSessions ===
                                                 1
-                                                ? "sesión"
-                                                : "sesiones"
+                                                ? t("common.sessions.one")
+                                                : t("common.sessions.other")
                                             } · ${accuracy ??
                                             "—"
                                             }%`
-                                            : "Todavía no entrenado"}
+                                            : t("common.notTrainedYet")}
 
                                         {performance &&
                                             lastTraining &&
                                             ` · ${lastTraining}`}
                                     </span>
                                 </span>
+
                                 <button
                                     type="button"
                                     className="library-item-menu-button"
@@ -379,8 +390,9 @@ function StudyNode({
                                             },
                                         );
                                     }}
-                                    aria-label={`Opciones de ${training.name}`}
-                                    title="Más opciones"
+                                    aria-label={training.name}
+                                    title={training.name}
+
                                 >
                                     <Ellipsis
                                         size={17}
@@ -456,10 +468,10 @@ function FolderNode({
                     }}
                     aria-label={
                         deleteMode
-                            ? `Borrar ${folder.name}`
+                            ? t("library.folder.deleteAria", { name: folder.name })
                             : folder.isExpanded
-                                ? `Contraer ${folder.name}`
-                                : `Expandir ${folder.name}`
+                                ? t("library.folder.collapse", { name: folder.name })
+                                : t("library.folder.expand", { name: folder.name })
                     }
                 >
                     {deleteMode ? (
@@ -500,8 +512,8 @@ function FolderNode({
                                 event.stopPropagation();
                                 onCreateFolder(folder.id);
                             }}
-                            title="Crear subcarpeta"
-                            aria-label={`Crear subcarpeta dentro de ${folder.name}`}
+                            title={t("library.folder.createSubfolderAria", { name: folder.name })}
+                            aria-label={t("library.folder.createSubfolderAria", { name: folder.name })}
                         >
                             <FolderPlus
                                 size={15}
@@ -515,14 +527,15 @@ function FolderNode({
                                 event.stopPropagation();
                                 onCreateStudy(folder.id);
                             }}
-                            title="Crear estudio"
-                            aria-label={`Crear estudio dentro de ${folder.name}`}
+                            title={t("library.folder.createStudyAria", { name: folder.name })}
+                            aria-label={t("library.folder.createStudyAria", { name: folder.name })}
                         >
                             <FilePlus2
                                 size={15}
                                 aria-hidden="true"
                             />
                         </button>
+
                         <button
                             type="button"
                             className="library-item-menu-button"
@@ -538,8 +551,9 @@ function FolderNode({
                                     },
                                 );
                             }}
-                            aria-label={`Opciones de ${folder.name}`}
-                            title="Más opciones"
+                            aria-label={folder.name}
+                            title={folder.name}
+
                         >
                             <Ellipsis
                                 size={17}
@@ -729,14 +743,13 @@ export default function LibrarySidebar({
 
         void confirmDialog({
             title:
-                "Eliminar entrenamiento",
+                t("library.training.deleteTitle"),
 
             message:
-                `¿Quieres borrar el entrenamiento "${training.name}"?\n\n` +
-                "Las estadísticas asociadas a este entrenamiento también se eliminarán.",
+                t("library.training.deleteMessage", { name: training.name }),
 
             confirmLabel:
-                "Eliminar",
+                t("app.dialog.delete"),
 
             destructive:
                 true,
@@ -769,16 +782,16 @@ export default function LibrarySidebar({
 
         void promptDialog({
             title:
-                "Renombrar entrenamiento",
+                t("library.training.renameTitle"),
 
             label:
-                "Nombre del entrenamiento",
+                t("library.training.nameLabel"),
 
             initialValue:
                 training.name,
 
             confirmLabel:
-                "Guardar",
+                t("app.dialog.save"),
         }).then(
             (
                 name,
@@ -898,16 +911,16 @@ export default function LibrarySidebar({
 
         void promptDialog({
             title:
-                "Renombrar carpeta",
+                t("library.folder.renameTitle"),
 
             label:
-                "Nombre de la carpeta",
+                t("library.folder.nameLabel"),
 
             initialValue:
                 folder.name,
 
             confirmLabel:
-                "Guardar",
+                t("app.dialog.save"),
         }).then(
             (
                 name,
@@ -964,16 +977,16 @@ export default function LibrarySidebar({
 
         void promptDialog({
             title:
-                "Renombrar estudio",
+                t("library.study.renameTitle"),
 
             label:
-                "Nombre del estudio",
+                t("library.study.nameLabel"),
 
             initialValue:
                 study.name,
 
             confirmLabel:
-                "Guardar",
+                t("app.dialog.save"),
         }).then(
             (
                 name,
@@ -1109,16 +1122,16 @@ export default function LibrarySidebar({
         void promptDialog({
             title:
                 parentId
-                    ? "Nueva subcarpeta"
-                    : "Nueva carpeta",
+                    ? t("library.folder.newSubfolderTitle")
+                    : t("library.folder.newTitle"),
 
             label:
                 parentId
-                    ? "Nombre de la subcarpeta"
-                    : "Nombre de la carpeta",
+                    ? t("library.folder.subfolderLabel")
+                    : t("library.folder.nameLabel"),
 
             confirmLabel:
-                "Crear",
+                t("app.dialog.save"),
         }).then(
             (
                 name,
@@ -1163,13 +1176,13 @@ export default function LibrarySidebar({
     ) {
         void promptDialog({
             title:
-                "Nuevo estudio",
+                t("library.study.newTitle"),
 
             label:
-                "Nombre del estudio",
+                t("library.study.nameLabel"),
 
             confirmLabel:
-                "Crear",
+                t("app.dialog.save"),
         }).then(
             (
                 name,
@@ -1234,14 +1247,13 @@ export default function LibrarySidebar({
 
         void confirmDialog({
             title:
-                "Eliminar estudio",
+                t("library.study.deleteTitle"),
 
             message:
-                `¿Quieres borrar el estudio "${study.name}"?\n\n` +
-                "También se eliminarán sus entrenamientos y estadísticas asociadas.",
+                t("library.study.deleteMessage", { name: study.name }),
 
             confirmLabel:
-                "Eliminar",
+                t("app.dialog.delete"),
 
             destructive:
                 true,
@@ -1348,22 +1360,19 @@ export default function LibrarySidebar({
 
         void confirmDialog({
             title:
-                "Eliminar carpeta",
+                t("library.folder.deleteTitle"),
 
             message:
-                `¿Quieres borrar la carpeta "${folder.name}"?\n\n` +
-                `También se eliminarán ${folderIdsToDelete.length - 1} ` +
-                `${folderIdsToDelete.length - 1 === 1
-                    ? "subcarpeta"
-                    : "subcarpetas"
-                } y ${studiesToDelete.length} ` +
-                `${studiesToDelete.length === 1
-                    ? "estudio"
-                    : "estudios"
-                }.`,
+                t("library.folder.deleteMessage", {
+                    name: folder.name,
+                    subfolderCount: folderIdsToDelete.length - 1,
+                    subfolderLabel: folderIdsToDelete.length - 1 === 1 ? t("common.folder") : t("common.folderPlural"),
+                    studyCount: studiesToDelete.length,
+                    studyLabel: studiesToDelete.length === 1 ? t("common.study") : t("common.studyPlural"),
+                }),
 
             confirmLabel:
-                "Eliminar",
+                t("app.dialog.delete"),
 
             destructive:
                 true,
@@ -1476,26 +1485,26 @@ export default function LibrarySidebar({
             return [
                 {
                     id: "new-subfolder",
-                    label: "Nueva subcarpeta",
+                    label: t("library.context.newSubfolder"),
                     onClick: () =>
                         createFolder(target.id),
                 },
                 {
                     id: "new-study",
-                    label: "Nuevo estudio",
+                    label: t("library.context.newStudy"),
                     onClick: () =>
                         createStudy(target.id),
                 },
                 {
                     id: "rename-folder",
-                    label: "Renombrar",
+                    label: t("library.context.rename"),
                     separatorBefore: true,
                     onClick: () =>
                         renameFolder(target.id),
                 },
                 {
                     id: "move-folder",
-                    label: "Mover a...",
+                    label: t("library.context.move"),
                     onClick: () =>
                         openMoveDialog({
                             type: "folder",
@@ -1504,7 +1513,7 @@ export default function LibrarySidebar({
                 },
                 {
                     id: "delete-folder",
-                    label: "Eliminar",
+                    label: t("library.context.delete"),
                     danger: true,
                     separatorBefore: true,
                     onClick: () =>
@@ -1517,13 +1526,13 @@ export default function LibrarySidebar({
             return [
                 {
                     id: "open-study",
-                    label: "Abrir",
+                    label: t("common.open"),
                     onClick: () =>
                         openStudy(target.id),
                 },
                 {
                     id: "new-training",
-                    label: "Nuevo entrenamiento",
+                    label: t("library.context.newTraining"),
                     separatorBefore: true,
                     onClick: () =>
                         setTrainingStudyId(
@@ -1532,14 +1541,14 @@ export default function LibrarySidebar({
                 },
                 {
                     id: "rename-study",
-                    label: "Renombrar",
+                    label: t("common.rename"),
                     separatorBefore: true,
                     onClick: () =>
                         renameStudy(target.id),
                 },
                 {
                     id: "move-study",
-                    label: "Mover a...",
+                    label: t("common.moveTo"),
                     onClick: () =>
                         openMoveDialog({
                             type: "study",
@@ -1548,20 +1557,20 @@ export default function LibrarySidebar({
                 },
                 {
                     id: "duplicate-study",
-                    label: "Duplicar",
+                    label: t("library.context.duplicate"),
                     disabled: true,
                     separatorBefore: true,
                     onClick: () => { },
                 },
                 {
                     id: "export-study",
-                    label: "Exportar PGN",
+                    label: t("library.context.exportPgn"),
                     disabled: true,
                     onClick: () => { },
                 },
                 {
                     id: "delete-study",
-                    label: "Eliminar",
+                    label: t("library.context.delete"),
                     danger: true,
                     separatorBefore: true,
                     onClick: () =>
@@ -1574,7 +1583,7 @@ export default function LibrarySidebar({
             return [
                 {
                     id: "open-training",
-                    label: "Abrir",
+                    label: t("common.open"),
                     onClick: () =>
                         onOpenTraining(
                             target.id,
@@ -1582,7 +1591,7 @@ export default function LibrarySidebar({
                 },
                 {
                     id: "rename-training",
-                    label: "Renombrar",
+                    label: t("common.rename"),
                     separatorBefore: true,
                     onClick: () =>
                         renameTrainingFromMenu(
@@ -1591,13 +1600,13 @@ export default function LibrarySidebar({
                 },
                 {
                     id: "duplicate-training",
-                    label: "Duplicar",
+                    label: t("library.context.duplicate"),
                     disabled: true,
                     onClick: () => { },
                 },
                 {
                     id: "delete-training",
-                    label: "Eliminar",
+                    label: t("library.context.delete"),
                     danger: true,
                     separatorBefore: true,
                     onClick: () =>
@@ -1620,14 +1629,13 @@ export default function LibrarySidebar({
         >
             <div className="library-sidebar-header">
                 <div>
-                    <h2>
-                        Biblioteca
-                    </h2>
+
+                    <h2>{t("library.title")}</h2>
 
                     <p>
                         {deleteMode
-                            ? "Selecciona qué quieres borrar"
-                            : "Carpetas y estudios"}
+                            ? t("library.deleteModePrompt")
+                            : t("library.subtitle")}
                     </p>
                 </div>
 
@@ -1644,7 +1652,7 @@ export default function LibrarySidebar({
                                 deleteMode
                             }
                         >
-                            + Carpeta
+                            {t("library.createFolder")}
                         </button>
 
                         <button
@@ -1658,7 +1666,7 @@ export default function LibrarySidebar({
                                 deleteMode
                             }
                         >
-                            + Estudio
+                            {t("library.createStudy")}
                         </button>
                     </div>
 
@@ -1678,8 +1686,8 @@ export default function LibrarySidebar({
                         }
                     >
                         {deleteMode
-                            ? "Cancelar"
-                            : "− Borrar"}
+                            ? t("library.deleteModeCancel")
+                            : t("library.deleteModeToggle")}
                     </button>
                 </div>
             </div>
@@ -1693,10 +1701,8 @@ export default function LibrarySidebar({
                         event.target.value,
                     )
                 }
-                placeholder="Buscar estudios..."
-                disabled={
-                    deleteMode
-                }
+                placeholder={t("library.search.placeholder")}
+                disabled={deleteMode}
             />
 
             <div className="library-tree">
@@ -1706,12 +1712,8 @@ export default function LibrarySidebar({
                     0 ? (
                     <div className="library-empty-state">
                         <strong>
-                            Tu biblioteca está vacía.
+                            {t("library.empty")}
                         </strong>
-                        <br></br>
-                        <span>
-                            Crea una carpeta o un estudio para empezar.
-                        </span>
                     </div>
                 ) : (
                     <>
@@ -1794,6 +1796,7 @@ export default function LibrarySidebar({
                                             study.id,
                                     );
 
+
                                 return (
                                     <StudyNode
                                         key={
@@ -1835,12 +1838,13 @@ export default function LibrarySidebar({
                         )}
                     </>
                 )}
+
             </div>
 
             <div className="library-footer">
                 <div className="library-footer-group">
                     <span className="library-footer-label">
-                        Biblioteca
+                        {t("library.footer.label")}
                     </span>
 
                     <div className="library-footer-actions">
@@ -1853,7 +1857,7 @@ export default function LibrarySidebar({
                                     ?.click()
                             }
                         >
-                            Importar
+                            {t("common.import")}
                         </button>
 
                         <button
@@ -1863,14 +1867,14 @@ export default function LibrarySidebar({
                                 onExportLibrary
                             }
                         >
-                            Exportar
+                            {t("common.export")}
                         </button>
                     </div>
                 </div>
 
                 <div className="library-footer-group">
                     <span className="library-footer-label">
-                        PGN
+                        {t("library.footer.pgnLabel")}
                     </span>
 
                     <div className="library-footer-actions">
@@ -1883,7 +1887,7 @@ export default function LibrarySidebar({
                                     ?.click()
                             }
                         >
-                            Importar
+                            {t("common.import")}
                         </button>
 
                         <button
@@ -1896,7 +1900,7 @@ export default function LibrarySidebar({
                                 !selectedStudyId
                             }
                         >
-                            Exportar
+                            {t("common.export")}
                         </button>
                     </div>
                 </div>
@@ -2000,8 +2004,8 @@ export default function LibrarySidebar({
                     title={
                         moveTarget.type ===
                             "folder"
-                            ? "Mover carpeta"
-                            : "Mover estudio"
+                            ? t("library.context.move")
+                            : t("common.moveTo")
                     }
                     folders={
                         library.folders

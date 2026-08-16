@@ -424,7 +424,6 @@ textarea,
     padding: 4px 8px;
     border-bottom: 1px solid #eeece6;
     width: 100%;
-    min-width: 390px;
 }
 
 .move-row:hover {

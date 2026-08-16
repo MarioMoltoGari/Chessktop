@@ -2,6 +2,8 @@ import type {
     EngineScore,
 } from "../../engine/types";
 
+import { t } from "../../i18n";
+
 import {
     formatEngineScore,
 } from "../../engine/parser";
@@ -44,18 +46,18 @@ export default function EvaluationBar({
     return (
         <div className="evaluation-section">
             <div className="evaluation-labels">
-                <span>Negras</span>
-                <span>Blancas</span>
+                <span>{t("training.newDialog.black")}</span>
+                <span>{t("training.newDialog.white")}</span>
             </div>
 
             <div
                 className="evaluation-bar"
                 role="meter"
-                aria-label="Evaluación de Stockfish"
+                aria-label={t("engine.evaluation")}
                 aria-valuetext={
                     score
                         ? formatEngineScore(score)
-                        : "Sin evaluación"
+                        : t("engine.evaluation.none")
                 }
             >
                 <div

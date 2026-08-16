@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 type BoardControlsProps = {
   currentNodeId: string;
   hasChildren: boolean;
@@ -22,23 +24,23 @@ export default function BoardControls({
   return (
     <div className="board-controls">
       <button type="button" onClick={onGoToStart} disabled={isAtRoot}>
-        Inicio
+        {t("board.controls.start")}
       </button>
 
       <button type="button" onClick={onGoToPrevious} disabled={isAtRoot}>
-        Anterior
+        {t("board.controls.previous")}
       </button>
 
       <button type="button" onClick={onGoToNext} disabled={!hasChildren}>
-        Siguiente
+        {t("board.controls.next")}
       </button>
 
       <button type="button" onClick={onDeleteBranch} disabled={isAtRoot}>
-        Borrar rama
+        {t("board.controls.deleteBranch")}
       </button>
 
       <button type="button" onClick={onReset}>
-        Reiniciar
+        {t("board.controls.reset")}
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
 import {
     useState,
 } from "react";
+import { t } from "../../i18n";
 
 import Modal from "../ui/Modal";
 
@@ -91,7 +92,7 @@ export default function CreateTrainingDialog({
     return (
         <Modal
             open={open}
-            title="Nuevo entrenamiento"
+            title={t("training.newDialog.title")}
             onClose={handleCancel}
             footer={
                 <>
@@ -100,7 +101,7 @@ export default function CreateTrainingDialog({
                         className="training-dialog-secondary-button"
                         onClick={handleCancel}
                     >
-                        Cancelar
+                        {t("app.dialog.cancel")}
                     </button>
 
                     <button
@@ -113,14 +114,14 @@ export default function CreateTrainingDialog({
                             handleCreate
                         }
                     >
-                        Crear
+                        {t("app.dialog.create")}
                     </button>
                 </>
             }
         >
             <div className="training-dialog">
                 <p className="training-dialog-study">
-                    Estudio:
+                    {t("training.newDialog.study")}
                     {" "}
                     <strong>
                         {studyName}
@@ -129,7 +130,7 @@ export default function CreateTrainingDialog({
 
                 <label className="training-dialog-field">
                     <span>
-                        Nombre
+                        {t("training.newDialog.name")}
                     </span>
 
                     <input
@@ -140,14 +141,14 @@ export default function CreateTrainingDialog({
                                 event.target.value,
                             )
                         }
-                        placeholder="Ej. Preparación torneo"
+                        placeholder={t("training.newDialog.placeholder")}
                         autoFocus
                     />
                 </label>
 
                 <fieldset className="training-dialog-group">
                     <legend>
-                        Jugar con
+                        {t("training.newDialog.side")}
                     </legend>
 
                     <label>
@@ -165,7 +166,7 @@ export default function CreateTrainingDialog({
                             }
                         />
 
-                        Blancas
+                        {t("training.newDialog.white")}
                     </label>
 
                     <label>
@@ -183,13 +184,13 @@ export default function CreateTrainingDialog({
                             }
                         />
 
-                        Negras
+                        {t("training.newDialog.black")}
                     </label>
                 </fieldset>
 
                 <fieldset className="training-dialog-group">
                     <legend>
-                        Líneas
+                        {t("training.newDialog.mode")}
                     </legend>
 
                     <label>
@@ -207,7 +208,7 @@ export default function CreateTrainingDialog({
                             }
                         />
 
-                        Todas las líneas
+                        {t("training.newDialog.mode.all")}
                     </label>
 
                     <label>
@@ -225,7 +226,7 @@ export default function CreateTrainingDialog({
                             }
                         />
 
-                        Solo línea principal
+                        {t("training.newDialog.mode.main")}
                     </label>
 
                     <label className="training-option-disabled">
@@ -234,17 +235,16 @@ export default function CreateTrainingDialog({
                             disabled
                         />
 
-                        Elegir líneas
+                        {t("training.newDialog.mode.future")}
                         <small>
-                            Próximamente
+                            {t("training.newDialog.future")}
                         </small>
                     </label>
                 </fieldset>
 
                 <fieldset className="training-dialog-group">
                     <legend>
-                        Orden de las respuestas
-                        del rival
+                        {t("training.newDialog.order")}
                     </legend>
 
                     <label>
@@ -262,7 +262,7 @@ export default function CreateTrainingDialog({
                             }
                         />
 
-                        Aleatorio
+                        {t("training.newDialog.order.random")}
                     </label>
 
                     <label>
@@ -280,7 +280,7 @@ export default function CreateTrainingDialog({
                             }
                         />
 
-                        Secuencial
+                        {t("training.newDialog.order.sequential")}
                     </label>
                 </fieldset>
             </div>

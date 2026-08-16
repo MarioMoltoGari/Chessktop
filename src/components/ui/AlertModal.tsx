@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import Modal from "./Modal";
 
 type AlertModalProps = {
@@ -14,7 +15,7 @@ export default function AlertModal({
     open,
     title,
     message,
-    buttonLabel = "Entendido",
+    buttonLabel = t("app.dialog.accept"),
     onClose,
 }: AlertModalProps) {
     return (

@@ -1,4 +1,5 @@
 import type { MoveNode, MoveRow, NodesMap } from "../types";
+import { t } from "../i18n";
 import { formatMoveLabel } from "../utils/chessTree";
 import NoteButton from "./NoteButton";
 import VariationLine from "./VariationLine";
@@ -28,17 +29,17 @@ export default function MovesPanel({
 }: MovesPanelProps) {
   return (
     <aside className="moves-panel">
-      <h2>Movimientos</h2>
+      <h2>{t("board.moves.title")}</h2>
 
       <div className="moves-table-header">
-        <span>N.º</span>
-        <span>Blancas</span>
-        <span>Negras</span>
-        <span aria-label="Notas" />
+        <span>{t("board.moves.header.number")}</span>
+        <span>{t("board.moves.header.white")}</span>
+        <span>{t("board.moves.header.black")}</span>
+        <span aria-label={t("common.notes")} />
       </div>
 
       {moveRows.length === 0 ? (
-        <p className="empty-message">Todavía no hay movimientos.</p>
+        <p className="empty-message">{t("board.moves.empty")}</p>
       ) : (
         <div className="moves-table">
           {moveRows.map((row) => {
@@ -104,21 +105,21 @@ export default function MovesPanel({
       )}
 
       <div className="position-information">
-        <h3>Posición actual</h3>
+        <h3>{t("app.positionCurrent")}</h3>
 
         <p>
-          Turno: <strong>{turn === "w" ? "Blancas" : "Negras"}</strong>
+          {t("app.turnLabel")}: <strong>{turn === "w" ? t("app.turn.white") : t("app.turn.black")}</strong>
         </p>
 
         <p>
-          Jugada seleccionada: <strong>{formatMoveLabel(currentNode)}</strong>
+          {t("app.currentMove")}: <strong>{formatMoveLabel(currentNode)}</strong>
         </p>
 
         <div className="export-row">
-          <span className="export-description">Exportar el árbol completo</span>
+          <span className="export-description">{t("board.moves.exportTree")}</span>
 
           <button type="button" className="pgn-button" onClick={onCopyPgn} disabled={nodes.root.children.length === 0}>
-            {pgnCopied ? "PGN copiado" : "Copiar PGN"}
+            {pgnCopied ? t("board.moves.pgnCopied") : t("board.moves.copyPgn")}
           </button>
         </div>
       </div>
