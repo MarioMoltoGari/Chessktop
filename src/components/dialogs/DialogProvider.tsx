@@ -4,6 +4,7 @@ import {
     useState,
     type ReactNode,
 } from "react";
+import { t } from "../../i18n";
 
 import Modal from "../ui/Modal";
 
@@ -21,7 +22,7 @@ type AlertRequest = {
     type: "alert";
 
     options:
-        AlertOptions;
+    AlertOptions;
 };
 
 type ConfirmRequest = {
@@ -30,7 +31,7 @@ type ConfirmRequest = {
     type: "confirm";
 
     options:
-        ConfirmOptions;
+    ConfirmOptions;
 
     resolve: (
         confirmed: boolean,
@@ -43,7 +44,7 @@ type PromptRequest = {
     type: "prompt";
 
     options:
-        PromptOptions;
+    PromptOptions;
 
     resolve: (
         value:
@@ -58,15 +59,15 @@ type DialogRequest =
 
 type DialogProviderProps = {
     children:
-        ReactNode;
+    ReactNode;
 };
 
 type DialogRendererProps = {
     request:
-        DialogRequest;
+    DialogRequest;
 
     onFinish:
-        () => void;
+    () => void;
 };
 
 /*
@@ -170,32 +171,23 @@ function DialogRenderer({
             "alert"
             ? request.options
                 .buttonLabel ??
-            "Entendido"
+            t("app.dialog.accept")
             : request.type ===
                 "confirm"
                 ? request.options
                     .confirmLabel ??
-                "Confirmar"
+                t("app.dialog.confirm")
                 : request.options
                     .confirmLabel ??
-                "Aceptar";
+                t("app.dialog.ok");
 
     const cancelButtonLabel =
-        request.type ===
-            "confirm" ||
-            request.type ===
-            "prompt"
-            ? request.options
-                .cancelLabel ??
-            "Cancelar"
+        request.type === "confirm" || request.type === "prompt"
+            ? request.options.cancelLabel ?? t("app.dialog.cancel")
             : null;
 
     const promptIsEmpty =
-        request.type ===
-            "prompt" &&
-        promptValue
-            .trim()
-            .length === 0;
+        request.type === "prompt" && promptValue.trim().length === 0;
 
     return (
         <Modal
@@ -245,90 +237,90 @@ function DialogRenderer({
         >
             {request.type ===
                 "alert" && (
-                <p className="modal-message">
-                    {
-                        request
-                            .options
-                            .message
-                    }
-                </p>
-            )}
+                    <p className="modal-message">
+                        {
+                            request
+                                .options
+                                .message
+                        }
+                    </p>
+                )}
 
             {request.type ===
                 "confirm" && (
-                <p className="modal-message">
-                    {
-                        request
-                            .options
-                            .message
-                    }
-                </p>
-            )}
+                    <p className="modal-message">
+                        {
+                            request
+                                .options
+                                .message
+                        }
+                    </p>
+                )}
 
             {request.type ===
                 "prompt" && (
-                <>
-                    {request
-                        .options
-                        .message && (
-                        <p className="modal-message">
-                            {
-                                request
-                                    .options
-                                    .message
-                            }
-                        </p>
-                    )}
-
-                    <div className="modal-field">
+                    <>
                         {request
                             .options
-                            .label && (
-                            <label
-                                htmlFor="chessktop-dialog-input"
-                            >
-                                {
-                                    request
-                                        .options
-                                        .label
-                                }
-                            </label>
-                        )}
+                            .message && (
+                                <p className="modal-message">
+                                    {
+                                        request
+                                            .options
+                                            .message
+                                    }
+                                </p>
+                            )}
 
-                        <input
-                            id="chessktop-dialog-input"
-                            type="text"
-                            value={
-                                promptValue
-                            }
-                            onChange={(
-                                event,
-                            ) =>
-                                setPromptValue(
-                                    event
-                                        .target
-                                        .value,
-                                )
-                            }
-                            onKeyDown={(
-                                event,
-                            ) => {
-                                if (
-                                    event.key ===
-                                    "Enter" &&
+                        <div className="modal-field">
+                            {request
+                                .options
+                                .label && (
+                                    <label
+                                        htmlFor="chessktop-dialog-input"
+                                    >
+                                        {
+                                            request
+                                                .options
+                                                .label
+                                        }
+                                    </label>
+                                )}
+
+                            <input
+                                id="chessktop-dialog-input"
+                                type="text"
+                                value={
                                     promptValue
-                                        .trim()
-                                        .length >
-                                    0
-                                ) {
-                                    confirmDialog();
                                 }
-                            }}
-                            autoFocus
-                        />
-                    </div>
-                </>
-            )}
+                                onChange={(
+                                    event,
+                                ) =>
+                                    setPromptValue(
+                                        event
+                                            .target
+                                            .value,
+                                    )
+                                }
+                                onKeyDown={(
+                                    event,
+                                ) => {
+                                    if (
+                                        event.key ===
+                                        "Enter" &&
+                                        promptValue
+                                            .trim()
+                                            .length >
+                                        0
+                                    ) {
+                                        confirmDialog();
+                                    }
+                                }}
+                                autoFocus
+                            />
+                        </div>
+                    </>
+                )}
         </Modal>
     );
 }
@@ -384,9 +376,9 @@ export function DialogProvider({
                     (
                         previousQueue,
                     ) => [
-                        ...previousQueue,
-                        request,
-                    ],
+                            ...previousQueue,
+                            request,
+                        ],
                 );
             },
             [],
@@ -419,9 +411,9 @@ export function DialogProvider({
                             (
                                 previousQueue,
                             ) => [
-                                ...previousQueue,
-                                request,
-                            ],
+                                    ...previousQueue,
+                                    request,
+                                ],
                         );
                     },
                 );
@@ -458,9 +450,9 @@ export function DialogProvider({
                             (
                                 previousQueue,
                             ) => [
-                                ...previousQueue,
-                                request,
-                            ],
+                                    ...previousQueue,
+                                    request,
+                                ],
                         );
                     },
                 );

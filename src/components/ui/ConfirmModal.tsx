@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import Modal from "./Modal";
 
 type ConfirmModalProps = {
@@ -18,8 +19,8 @@ export default function ConfirmModal({
     open,
     title,
     message,
-    confirmLabel = "Confirmar",
-    cancelLabel = "Cancelar",
+    confirmLabel = t("app.dialog.confirm"),
+    cancelLabel = t("app.dialog.cancel"),
     destructive = false,
     onConfirm,
     onClose,

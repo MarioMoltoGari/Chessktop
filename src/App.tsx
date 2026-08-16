@@ -95,6 +95,7 @@ import type {
 import {
   importPgnAsStudy,
 } from "./imports/pgnImporter";
+import { t } from "./i18n";
 
 type MoveNode = {
   id: string;
@@ -268,7 +269,7 @@ function getStudyNameFromPgnFile(
 
   return (
     normalizedName ||
-    "Estudio importado"
+    t("app.importStudy.defaultName")
   );
 }
 
@@ -1217,30 +1218,18 @@ function AppContent() {
       "quota"
     ) {
       showAlert({
-        title:
-          "No se han podido guardar los cambios",
-
-        message:
-          "El almacenamiento del navegador está lleno.\n\n" +
-          "La última versión guardada correctamente sigue intacta. Te recomendamos exportar una copia de seguridad.",
-
-        buttonLabel:
-          "Entendido",
+        title: t("app.alert.saveFailed.title"),
+        message: t("app.alert.saveFailed.message"),
+        buttonLabel: t("app.dialog.accept"),
       });
 
       return;
     }
 
     showAlert({
-      title:
-        "No se han podido guardar los cambios",
-
-      message:
-        "El almacenamiento del navegador está lleno.\n\n" +
-        "La última versión guardada correctamente sigue intacta. Te recomendamos exportar una copia de seguridad.",
-
-      buttonLabel:
-        "Entendido",
+      title: t("app.alert.saveFailed.title"),
+      message: t("app.alert.saveFailed.message"),
+      buttonLabel: t("app.dialog.accept"),
     });
 
   }, [
@@ -1270,13 +1259,8 @@ function AppContent() {
       true;
 
     showAlert({
-      title:
-        "Problema con los datos guardados",
-
-      message:
-        "Chessktop no ha podido cargar los datos guardados porque parecen estar dañados.\n\n" +
-        "Para protegerlos, no se sobrescribirá el almacenamiento actual.\n\n" +
-        "Puedes restaurar una copia de seguridad válida desde la biblioteca.",
+      title: t("app.alert.persistenceBlocked.title"),
+      message: t("app.alert.persistenceBlocked.message"),
     });
   }, [
     initialState.persistenceBlocked,
@@ -1423,7 +1407,7 @@ function AppContent() {
     );
 
     showToast(
-      "Entrenamiento renombrado.",
+      t("app.toast.trainingRenamed"),
     );
   }
 
@@ -1492,7 +1476,7 @@ function AppContent() {
     );
 
     showToast(
-      "Entrenamiento eliminado.",
+      t("app.toast.trainingDeleted"),
     );
   }
 
@@ -1526,7 +1510,7 @@ function AppContent() {
     );
 
     showToast(
-      "Entrenamiento creado correctamente.",
+      t("app.toast.trainingCreated"),
     );
 
     return training;
@@ -1841,9 +1825,7 @@ function AppContent() {
       );
 
       showAlert({
-        title:
-          "No se pudo importar la biblioteca",
-
+        title: t("app.alert.importLibraryFailed.title"),
         message,
       });
 
@@ -1852,22 +1834,11 @@ function AppContent() {
 
     const confirmed =
       await confirmDialog({
-        title:
-          "Restaurar copia de seguridad",
-
-        message:
-          "La copia seleccionada es válida.\n\n" +
-          "La biblioteca actual será reemplazada completamente.\n\n" +
-          "Las carpetas, estudios, movimientos, notas, entrenamientos y estadísticas que no estén en la copia se perderán.",
-
-        confirmLabel:
-          "Restaurar biblioteca",
-
-        cancelLabel:
-          "Cancelar",
-
-        destructive:
-          true,
+        title: t("app.restoreBackup.title"),
+        message: t("app.restoreBackup.message"),
+        confirmLabel: t("app.restoreBackup.confirm"),
+        cancelLabel: t("app.dialog.cancel"),
+        destructive: true,
       });
 
     if (!confirmed) {
@@ -1945,7 +1916,7 @@ function AppContent() {
       false;
 
     showToast(
-      "Biblioteca restaurada correctamente.",
+      t("app.importSuccess"),
       3500,
     );
   }
@@ -1960,17 +1931,10 @@ function AppContent() {
 
     const requestedName =
       await promptDialog({
-        title:
-          "Importar PGN",
-
-        label:
-          "Nombre del nuevo estudio",
-
-        initialValue:
-          suggestedName,
-
-        confirmLabel:
-          "Importar",
+        title: t("app.importPgn.title"),
+        label: t("app.importPgn.label"),
+        initialValue: suggestedName,
+        confirmLabel: t("app.importPgn.confirm"),
       });
 
     if (!requestedName) {
@@ -2042,7 +2006,9 @@ function AppContent() {
       closeNote();
 
       showToast(
-        `PGN importado como "${studyName}".`,
+        t("app.importPgn.success", {
+          name: studyName,
+        }),
         3500,
       );
     } catch (
@@ -2051,7 +2017,7 @@ function AppContent() {
       const message =
         error instanceof Error
           ? error.message
-          : "No se pudo importar el PGN.";
+          : t("app.alert.importPgnFailed.message");
 
       console.error(
         "Error al importar PGN:",
@@ -2059,9 +2025,7 @@ function AppContent() {
       );
 
       showAlert({
-        title:
-          "No se pudo importar el PGN",
-
+        title: t("app.alert.importPgnFailed.title"),
         message,
       });
     }
@@ -2072,12 +2036,8 @@ function AppContent() {
       persistenceBlocked
     ) {
       showAlert({
-        title:
-          "Exportación bloqueada",
-
-        message:
-          "Chessktop está en modo de protección porque los datos locales no se pudieron cargar.\n\n" +
-          "Restaura primero una copia de seguridad válida antes de exportar.",
+        title: t("app.alert.exportBlocked.title"),
+        message: t("app.alert.exportBlocked.message"),
       });
 
       return;
@@ -2099,7 +2059,7 @@ function AppContent() {
       });
 
       showToast(
-        "Copia de seguridad exportada.",
+        t("app.exportSuccess"),
       );
     } catch (
     error
@@ -2110,9 +2070,7 @@ function AppContent() {
       );
 
       showAlert({
-        title:
-          "No se pudo exportar la biblioteca",
-
+        title: t("app.alert.importLibraryFailed.title"),
         message:
           error instanceof Error
             ? error.message
@@ -2247,10 +2205,6 @@ function AppContent() {
     whiteMove?: MoveNode,
     blackMove?: MoveNode,
   ) {
-    /*
-     * Si la fila solo contiene un movimiento,
-     * no necesitamos preguntar nada.
-     */
     if (
       whiteMove &&
       !blackMove
@@ -2273,10 +2227,6 @@ function AppContent() {
       return;
     }
 
-    /*
-     * Si existen blanca y negra,
-     * mostramos un selector pequeño.
-     */
     if (
       whiteMove &&
       blackMove
@@ -2607,15 +2557,15 @@ function AppContent() {
   }
 
   /*
- * Navegación rápida por el estudio.
- *
- * ← movimiento anterior
- * → movimiento siguiente
- *
- * Se desactiva mientras escribimos,
- * mientras hay un diálogo abierto o
- * durante un entrenamiento.
- */
+  * Navegación rápida por el estudio.
+  *
+  * ← movimiento anterior
+  * → movimiento siguiente
+  *
+  * Se desactiva mientras escribimos,
+  * mientras hay un diálogo abierto o
+  * durante un entrenamiento.
+  */
   useEffect(() => {
     function handleNavigationKeyDown(
       event: KeyboardEvent,
@@ -2918,7 +2868,7 @@ function AppContent() {
     );
 
     showToast(
-      "PGN exportado correctamente.",
+      t("app.toast.pgnExported"),
     );
   }
 
@@ -2933,8 +2883,9 @@ function AppContent() {
 
             <p>
               {selectedStudy
-                ? selectedStudy.name
-                : "Selecciona un estudio"}
+                ? selectedStudy
+                  .name
+                : t("app.studyPlaceholder")}
             </p>
           </div>
 
@@ -3074,7 +3025,7 @@ function AppContent() {
                           !targetSquare
                         ) {
                           showToast(
-                            "Selecciona o crea un estudio para utilizar el tablero.",
+                            t("app.toast.selectStudy"),
                             3000,
                           );
 
@@ -3119,7 +3070,7 @@ function AppContent() {
                       "root"
                     }
                   >
-                    Inicio
+                    {t("board.controls.start")}
                   </button>
 
                   <button
@@ -3132,7 +3083,7 @@ function AppContent() {
                       "root"
                     }
                   >
-                    Anterior
+                    {t("board.controls.previous")}
                   </button>
 
                   <button
@@ -3148,7 +3099,7 @@ function AppContent() {
                       0
                     }
                   >
-                    Siguiente
+                    {t("board.controls.next")}
                   </button>
 
                   <button
@@ -3161,7 +3112,7 @@ function AppContent() {
                       "root"
                     }
                   >
-                    Borrar rama
+                    {t("board.controls.deleteBranch")}
                   </button>
 
                   <button
@@ -3176,27 +3127,27 @@ function AppContent() {
                       0
                     }
                   >
-                    Reiniciar
+                    {t("board.controls.reset")}
                   </button>
                 </div>
               </div>
 
               <aside className="moves-panel">
                 <h2>
-                  Movimientos
+                  {t("board.moves.title")}
                 </h2>
 
                 <div className="moves-table-header">
                   <span>
-                    N.º
+                    {t("board.moves.header.number")}
                   </span>
 
                   <span>
-                    Blancas
+                    {t("board.moves.header.white")}
                   </span>
 
                   <span>
-                    Negras
+                    {t("board.moves.header.black")}
                   </span>
 
                   <span aria-label="Notas" />
@@ -3205,7 +3156,7 @@ function AppContent() {
                 {moveRows.length ===
                   0 ? (
                   <p className="empty-message">
-                    Todavía no hay movimientos.
+                    {t("board.moves.empty")}
                   </p>
                 ) : (
                   <div className="moves-table">
@@ -3366,25 +3317,25 @@ function AppContent() {
 
                 <div className="position-information">
                   <h3>
-                    Posición actual
+                    {t("app.positionCurrent")}
                   </h3>
 
                   <p>
-                    Turno:{" "}
+                    {t("app.turnLabel")} {" "}
                     <strong>
                       {game.turn() ===
                         "w"
-                        ? "Blancas"
-                        : "Negras"}
+                        ? t("app.turn.white")
+                        : t("app.turn.black")}
                     </strong>
                   </p>
 
                   <p>
-                    Jugada seleccionada:{" "}
+                    {t("app.currentMove")} {" "}
                     <strong>
                       {currentNodeId ===
                         "root"
-                        ? "Posición inicial"
+                        ? t("app.initialPosition")
                         : `${Math.ceil(
                           currentNode
                             .ply /
@@ -3536,6 +3487,7 @@ function AppContent() {
             </section>
           </div>
         )}
+
         {noteNodeId &&
           nodes[
           noteNodeId
@@ -3562,7 +3514,7 @@ function AppContent() {
                 <header className="note-dialog-header">
                   <div>
                     <span className="note-dialog-label">
-                      Apunte del movimiento
+                      {t("board.note.dialog.title")}
                     </span>
 
                     <h2 id="note-title">
@@ -3595,7 +3547,7 @@ function AppContent() {
                     onClick={
                       closeNote
                     }
-                    aria-label="Cerrar nota"
+                    aria-label={t("board.note.dialog.close")}
                   >
                     <X
                       size={19}
@@ -3617,7 +3569,7 @@ function AppContent() {
                         .value,
                     )
                   }
-                  placeholder="Escribe aquí tus ideas, planes, errores frecuentes o recordatorios..."
+                  placeholder={t("board.note.dialog.placeholder")}
                   autoFocus
                 />
 
@@ -3632,7 +3584,7 @@ function AppContent() {
                           deleteNote
                         }
                       >
-                        Borrar nota
+                        {t("board.note.dialog.delete")}
                       </button>
                     )}
 
@@ -3644,7 +3596,7 @@ function AppContent() {
                         closeNote
                       }
                     >
-                      Cancelar
+                      {t("app.dialog.cancel")}
                     </button>
 
                     <button
@@ -3654,7 +3606,7 @@ function AppContent() {
                         saveNote
                       }
                     >
-                      Guardar
+                      {t("app.dialog.save")}
                     </button>
                   </div>
                 </footer>
@@ -3671,6 +3623,7 @@ function AppContent() {
           }
         />
       </main>
+
       <Onboarding
         open={
           onboardingOpen
@@ -3681,7 +3634,8 @@ function AppContent() {
         onClose={
           closeOnboarding
         }
-      /></>
+      />
+    </>
   );
 }
 

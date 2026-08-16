@@ -3,6 +3,7 @@ import {
     Library,
     X,
 } from "lucide-react";
+import { t } from "../../i18n";
 
 import type {
     LibraryFolder,
@@ -108,7 +109,7 @@ export default function MoveLibraryItemDialog({
                         onClick={
                             onCancel
                         }
-                        aria-label="Cerrar"
+                        aria-label={t("app.dialog.close")}
                     >
                         <X
                             size={18}
@@ -138,7 +139,7 @@ export default function MoveLibraryItemDialog({
                         />
 
                         <span>
-                            Biblioteca principal
+                            {t("library.primaryRoot")}
                         </span>
                     </button>
 
@@ -195,7 +196,7 @@ export default function MoveLibraryItemDialog({
                             onCancel
                         }
                     >
-                        Cancelar
+                        {t("app.dialog.cancel")}
                     </button>
                 </footer>
             </section>

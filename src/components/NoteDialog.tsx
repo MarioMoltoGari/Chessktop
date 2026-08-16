@@ -1,4 +1,5 @@
 import type { MoveNode } from "../types";
+import { t } from "../i18n";
 import { formatMoveLabel } from "../utils/chessTree";
 
 type NoteDialogProps = {
@@ -36,11 +37,11 @@ export default function NoteDialog({
       <section className="note-dialog" role="dialog" aria-modal="true" aria-labelledby="note-title">
         <header className="note-dialog-header">
           <div>
-            <span className="note-dialog-label">Apunte del movimiento</span>
+            <span className="note-dialog-label">{t("board.note.dialog.title")}</span>
             <h2 id="note-title">{formatMoveLabel(node)}</h2>
           </div>
 
-          <button type="button" className="note-close-button" onClick={onClose} aria-label="Cerrar nota">
+          <button type="button" className="note-close-button" onClick={onClose} aria-label={t("board.note.dialog.close")}>
             ×
           </button>
         </header>
@@ -49,24 +50,24 @@ export default function NoteDialog({
           className="note-textarea"
           value={noteDraft}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Escribe aquí tus ideas, planes, errores frecuentes o recordatorios..."
+          placeholder={t("board.note.dialog.placeholder")}
           autoFocus
         />
 
         <footer className="note-dialog-actions">
           {hasExistingNote && (
             <button type="button" className="note-delete-button" onClick={onDelete}>
-              Borrar nota
+              {t("board.note.dialog.delete")}
             </button>
           )}
 
           <div className="note-main-actions">
             <button type="button" className="note-cancel-button" onClick={onClose}>
-              Cancelar
+              {t("app.dialog.cancel")}
             </button>
 
             <button type="button" className="note-save-button" onClick={onSave}>
-              Guardar
+              {t("app.dialog.save")}
             </button>
           </div>
         </footer>

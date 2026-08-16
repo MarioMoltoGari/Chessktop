@@ -4,6 +4,8 @@ import {
     useState,
 } from "react";
 
+import { t } from "../../i18n";
+
 import {
     Chess,
 } from "chess.js";
@@ -1373,7 +1375,7 @@ export default function TrainingWorkspace({
                 <header className="training-workspace-header">
                     <div>
                         <span className="training-workspace-label">
-                            Entrenamiento
+                            {t("training.workspace.label")}
                         </span>
 
                         <h2>
@@ -1391,21 +1393,21 @@ export default function TrainingWorkspace({
                             onClose
                         }
                     >
-                        Volver al estudio
+                        {t("training.workspace.backToStudy")}
                     </button>
                 </header>
 
                 <div className="training-review-intro">
                     <span className="training-review-intro-label">
-                        Sin movimientos
+                        {t("training.workspace.noMoves.title")}
                     </span>
 
                     <h3>
-                        Este entrenamiento no tiene posiciones que practicar
+                        {t("training.workspace.noMoves.message")}
                     </h3>
 
                     <p>
-                        Añade movimientos al estudio antes de iniciar este entrenamiento.
+                        {t("training.workspace.noMoves.help")}
                     </p>
 
                     <button
@@ -1415,7 +1417,7 @@ export default function TrainingWorkspace({
                             onClose
                         }
                     >
-                        Volver al estudio
+                        {t("training.workspace.backToStudy")}
                     </button>
                 </div>
             </section>
@@ -1430,7 +1432,7 @@ export default function TrainingWorkspace({
                 <header className="training-workspace-header">
                     <div>
                         <span className="training-workspace-label">
-                            Entrenamiento
+                            {t("training.workspace.label")}
                         </span>
 
                         <h2>
@@ -1448,24 +1450,22 @@ export default function TrainingWorkspace({
                             onClose
                         }
                     >
-                        Volver al estudio
+                        {t("training.workspace.backToStudy")}
                     </button>
                 </header>
 
                 <div className="training-results">
                     <div className="training-results-header">
                         <span className="training-results-label">
-                            Sesión terminada
+                            {t("training.workspace.completed.title")}
                         </span>
 
                         <h3>
-                            Entrenamiento completado
+                            {t("training.workspace.completed.subtitle")}
                         </h3>
 
                         <p>
-                            Has terminado todas las líneas
-                            y los repasos pendientes de
-                            esta sesión.
+                            {t("training.workspace.completed.description")}
                         </p>
                     </div>
 
@@ -1484,7 +1484,7 @@ export default function TrainingWorkspace({
                             </strong>
 
                             <span>
-                                Precisión
+                                {t("training.workspace.completed.accuracy")}
                             </span>
                         </div>
                     </div>
@@ -1492,7 +1492,7 @@ export default function TrainingWorkspace({
                     <div className="training-results-grid">
                         <div className="training-result-card">
                             <span>
-                                Aciertos
+                                {t("training.session.correct")}
                             </span>
 
                             <strong>
@@ -1504,7 +1504,7 @@ export default function TrainingWorkspace({
 
                         <div className="training-result-card">
                             <span>
-                                Errores
+                                {t("training.session.incorrect")}
                             </span>
 
                             <strong>
@@ -1516,7 +1516,7 @@ export default function TrainingWorkspace({
 
                         <div className="training-result-card">
                             <span>
-                                Líneas
+                                {t("training.workspace.completed.lines")}
                             </span>
 
                             <strong>
@@ -1534,7 +1534,7 @@ export default function TrainingWorkspace({
 
                         <div className="training-result-card">
                             <span>
-                                Posiciones problemáticas
+                                {t("training.workspace.completed.problematic")}
                             </span>
 
                             <strong>
@@ -1548,7 +1548,7 @@ export default function TrainingWorkspace({
 
                         <div className="training-result-card">
                             <span>
-                                Posiciones repasadas
+                                {t("training.workspace.completed.reviewed")}
                             </span>
 
                             <strong>
@@ -1560,7 +1560,7 @@ export default function TrainingWorkspace({
 
                         <div className="training-result-card">
                             <span>
-                                Duración
+                                {t("training.workspace.completed.duration")}
                             </span>
 
                             <strong>
@@ -1572,25 +1572,14 @@ export default function TrainingWorkspace({
                     {session.problematicNodeIds.length ===
                         0 ? (
                         <div className="training-results-message success">
-                            No has tenido posiciones
-                            problemáticas en esta sesión.
+                            {t("training.workspace.completed.noProblems")}
                         </div>
                     ) : (
                         <div className="training-results-message">
-                            Has tenido dificultades en{" "}
-                            <strong>
-                                {
-                                    session
-                                        .problematicNodeIds
-                                        .length
-                                }
-                            </strong>{" "}
-                            {session.problematicNodeIds.length ===
-                                1
-                                ? "posición"
-                                : "posiciones"}
-                            . Chessktop las ha incluido
-                            en el repaso final.
+                            {t("training.workspace.completed.hasProblems", {
+                                count: session.problematicNodeIds.length,
+                                word: session.problematicNodeIds.length === 1 ? t("training.review.intro.countOne") : t("training.review.intro.countMany")
+                            })}
                         </div>
                     )}
 
@@ -1602,7 +1591,7 @@ export default function TrainingWorkspace({
                                 restartTraining
                             }
                         >
-                            Repetir entrenamiento
+                            {t("training.workspace.completed.repeat")}
                         </button>
 
                         <button
@@ -1612,7 +1601,7 @@ export default function TrainingWorkspace({
                                 onClose
                             }
                         >
-                            Volver al estudio
+                            {t("training.workspace.backToStudy")}
                         </button>
                     </div>
                 </div>
@@ -1629,7 +1618,7 @@ export default function TrainingWorkspace({
                 <header className="training-workspace-header">
                     <div>
                         <span className="training-workspace-label">
-                            Entrenamiento
+                            {t("training.workspace.label")}
                         </span>
 
                         <h2>
@@ -1647,25 +1636,21 @@ export default function TrainingWorkspace({
                             onClose
                         }
                     >
-                        Volver al estudio
+                        {t("training.workspace.backToStudy")}
                     </button>
                 </header>
 
                 <div className="training-review-intro">
                     <span className="training-review-intro-label">
-                        Repaso
+                        {t("training.review.intro.label")}
                     </span>
 
                     <h3>
-                        Vamos a entrenar las posiciones
-                        que has fallado antes
+                        {t("training.review.intro.title")}
                     </h3>
 
                     <p>
-                        Has completado todas las líneas
-                        del entrenamiento. Ahora vamos a
-                        volver directamente a las posiciones
-                        que te han dado más problemas.
+                        {t("training.review.intro.message")}
                     </p>
 
                     <div className="training-review-count">
@@ -1680,8 +1665,8 @@ export default function TrainingWorkspace({
                         <span>
                             {session.reviewNodeIds.length ===
                                 1
-                                ? "posición por repasar"
-                                : "posiciones por repasar"}
+                                ? t("training.review.intro.countOne")
+                                : t("training.review.intro.countMany")}
                         </span>
                     </div>
 
@@ -1692,7 +1677,7 @@ export default function TrainingWorkspace({
                             startReview
                         }
                     >
-                        Empezar repaso
+                        {t("training.review.start")}
                     </button>
                 </div>
             </section>
@@ -1705,8 +1690,8 @@ export default function TrainingWorkspace({
                 <div>
                     <span className="training-workspace-label">
                         {session.phase === "review"
-                            ? "Repaso"
-                            : "Entrenamiento"}
+                            ? t("common.review")
+                            : t("training.workspace.label")}
                     </span>
 
                     <h2>
@@ -1724,7 +1709,7 @@ export default function TrainingWorkspace({
                         onClose
                     }
                 >
-                    Volver al estudio
+                    {t("training.workspace.backToStudy")}
                 </button>
             </header>
 
@@ -1741,7 +1726,7 @@ export default function TrainingWorkspace({
                     {feedback.explanation && (
                         <div className="training-feedback-explanation">
                             <strong>
-                                Nota del estudio
+                                {t("training.feedback.note.studyNote")}
                             </strong>
 
                             <span>
@@ -1756,13 +1741,11 @@ export default function TrainingWorkspace({
                         <div className="training-feedback-note-suggestion">
                             <div>
                                 <strong>
-                                    ¿Quieres entender mejor esta jugada?
+                                    {t("training.feedback.noteQuestion")}
                                 </strong>
 
                                 <span>
-                                    Añade una nota explicando por qué
-                                    se juega. Podrás usarla como ayuda
-                                    en futuros entrenamientos.
+                                    {t("training.feedback.noteHelp")}
                                 </span>
                             </div>
 
@@ -1775,7 +1758,7 @@ export default function TrainingWorkspace({
                                     )
                                 }
                             >
-                                Añadir nota
+                                {t("training.feedback.addNote")}
                             </button>
                         </div>
                     )}
@@ -1784,7 +1767,7 @@ export default function TrainingWorkspace({
                         !feedback.solutionMove && (
                             <div className="training-feedback-solution">
                                 <span>
-                                    ¿Necesitas ayuda?
+                                    {t("training.feedback.help")}
                                 </span>
 
                                 <button
@@ -1796,7 +1779,7 @@ export default function TrainingWorkspace({
                                         )
                                     }
                                 >
-                                    Mostrar solución
+                                    {t("training.feedback.showSolution")}
                                 </button>
                             </div>
                         )}
@@ -1804,21 +1787,15 @@ export default function TrainingWorkspace({
                     {feedback.solutionMove && (
                         <div className="training-feedback-solution-revealed">
                             <strong>
-                                Solución
+                                {t("training.feedback.solutionLabel")}
                             </strong>
 
                             <span>
-                                La jugada era{" "}
-                                <b>
-                                    {
-                                        feedback.solutionMove
-                                    }
-                                </b>
+                                {t("training.feedback.solutionText", { move: feedback.solutionMove })}{" "}
                             </span>
 
                             <small>
-                                Ahora realiza tú el movimiento
-                                para continuar.
+                                {t("training.feedback.solutionHint")}
                             </small>
                         </div>
                     )}
@@ -1880,13 +1857,13 @@ export default function TrainingWorkspace({
                 <aside className="training-session-panel">
                     <h3>
                         {session.phase === "review"
-                            ? "Repaso"
-                            : "Sesión"}
+                            ? t("common.review")
+                            : t("training.workspace.label")}
                     </h3>
 
                     <div className="training-session-stat">
                         <span>
-                            Esperado
+                            {t("training.session.expected")}
                         </span>
 
                         <strong>
@@ -1898,7 +1875,7 @@ export default function TrainingWorkspace({
                         <>
                             <div className="training-session-stat">
                                 <span>
-                                    Progreso
+                                    {t("training.session.progress")}
                                 </span>
 
                                 <strong>
@@ -1912,7 +1889,7 @@ export default function TrainingWorkspace({
 
                             <div className="training-session-stat">
                                 <span>
-                                    Línea actual
+                                    {t("training.session.currentLine")}
                                 </span>
 
                                 <strong>
@@ -1932,7 +1909,7 @@ export default function TrainingWorkspace({
                     {session.phase === "review" && (
                         <div className="training-session-stat">
                             <span>
-                                Posición
+                                {t("training.session.position")}
                             </span>
 
                             <strong>
@@ -1949,7 +1926,7 @@ export default function TrainingWorkspace({
 
                     <div className="training-session-stat">
                         <span>
-                            Aciertos
+                            {t("training.session.correct")}
                         </span>
 
                         <strong>
@@ -1961,7 +1938,7 @@ export default function TrainingWorkspace({
 
                     <div className="training-session-stat">
                         <span>
-                            Errores
+                            {t("training.session.incorrect")}
                         </span>
 
                         <strong>
@@ -1973,7 +1950,7 @@ export default function TrainingWorkspace({
 
                     <div className="training-session-stat">
                         <span>
-                            Errores aquí
+                            {t("training.session.mistakesHere")}
                         </span>
 
                         <strong>
@@ -1985,7 +1962,7 @@ export default function TrainingWorkspace({
 
                     <div className="training-session-stat">
                         <span>
-                            Posiciones problemáticas
+                            {t("training.session.problematic")}
                         </span>
 
                         <strong>
@@ -1999,7 +1976,7 @@ export default function TrainingWorkspace({
 
                     <div className="training-session-stat">
                         <span>
-                            Precisión
+                            {t("training.session.accuracy")}
                         </span>
 
                         <strong>
@@ -2010,11 +1987,11 @@ export default function TrainingWorkspace({
                     <div className="training-session-status">
                         {opponentThinking
                             ? session.phase === "review"
-                                ? "Preparando siguiente posición..."
-                                : "Juega Chessktop..."
+                                ? t("training.session.status.reviewThinking")
+                                : t("training.session.status.thinking")
                             : userTurn
-                                ? "Tu turno"
-                                : "Preparando posición"}
+                                ? t("training.session.status.yourTurn")
+                                : t("training.session.status.preparing")}
                     </div>
                 </aside>
             </div>

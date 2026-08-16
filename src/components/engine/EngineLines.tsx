@@ -2,6 +2,8 @@ import type {
     EngineLine,
 } from "../../engine/types";
 
+import { t } from "../../i18n";
+
 import {
     formatEngineScore,
 } from "../../engine/parser";
@@ -217,7 +219,7 @@ export default function EngineLines({
                                     line.sanMoves,
                                     fen,
                                 )
-                                : "Calculando..."}
+                                : t("engine.loading") + "..."}
                         </span>
 
                         <span className="engine-line-depth">

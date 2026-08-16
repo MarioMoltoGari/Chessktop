@@ -2,6 +2,7 @@ import {
   Plus,
   StickyNote,
 } from "lucide-react";
+import { t } from "../i18n";
 
 import type {
   MoveNode,
@@ -40,13 +41,13 @@ export default function NoteButton({
       }}
       aria-label={
         hasNote
-          ? `Abrir nota de ${node.san}`
-          : `Añadir nota a ${node.san}`
+          ? t("note.button.aria.open", { move: node.san ?? "" })
+          : t("note.button.aria.add", { move: node.san ?? "" })
       }
       title={
         hasNote
-          ? "Abrir nota"
-          : "Añadir nota"
+          ? t("board.note.open")
+          : t("board.note.add")
       }
     >
       {hasNote ? (
