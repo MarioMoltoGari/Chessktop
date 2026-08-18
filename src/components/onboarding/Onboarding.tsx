@@ -20,6 +20,8 @@ import {
     useState,
 } from "react";
 
+import { t } from "../../i18n";
+
 type OnboardingProps = {
     open: boolean;
 
@@ -85,7 +87,7 @@ export default function Onboarding({
                 className="onboarding"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Guía de inicio de Chessktop"
+                aria-label={t("onboarding.title")}
             >
                 <header className="onboarding-header">
                     <div className="onboarding-brand">
@@ -94,7 +96,7 @@ export default function Onboarding({
                         </span>
 
                         <small>
-                            Guía de inicio
+                            {t("onboarding.title")}
                         </small>
                     </div>
 
@@ -111,8 +113,8 @@ export default function Onboarding({
                             onClick={
                                 handleClose
                             }
-                            aria-label="Cerrar guía"
-                            title="Cerrar guía"
+                            aria-label={t("onboarding.closeButton")}
+                            title={t("onboarding.closeButton")}
                         >
                             <X
                                 size={20}
@@ -172,7 +174,7 @@ export default function Onboarding({
                             onComplete
                         }
                     >
-                        Omitir guía
+                        {t("onboarding.skipButton")}
                     </button>
 
                     <div className="onboarding-navigation">
@@ -190,7 +192,7 @@ export default function Onboarding({
                                 />
 
                                 <span>
-                                    Anterior
+                                    {t("onboarding.previousButton")}
                                 </span>
                             </button>
                         )}
@@ -206,11 +208,11 @@ export default function Onboarding({
                                 {step ===
                                     TOTAL_STEPS -
                                     1
-                                    ? "Empezar a usar Chessktop"
+                                    ? t("onboarding.startChessButton")
                                     : step ===
                                         0
-                                        ? "Empezar recorrido"
-                                        : "Siguiente"}
+                                        ? t("onboarding.startTourButton")
+                                        : t("onboarding.nextButton")}
                             </span>
 
                             <ArrowRight
@@ -229,18 +231,15 @@ function WelcomeStep() {
     return (
         <div className="onboarding-step onboarding-welcome-step">
             <span className="onboarding-eyebrow">
-                Bienvenido
+                {t("onboarding.welcome.title")}
             </span>
 
             <h1>
-                Tu repertorio de ajedrez,
-                organizado y listo para entrenar.
+                {t("onboarding.welcome.heading")}
             </h1>
 
             <p className="onboarding-lead">
-                Crea estudios, analiza posiciones y
-                convierte tus líneas en entrenamientos
-                para practicar tu repertorio.
+                {t("onboarding.welcome.description")}
             </p>
 
             <div className="onboarding-feature-flow">
@@ -253,11 +252,11 @@ function WelcomeStep() {
                     </span>
 
                     <strong>
-                        Estudia
+                        {t("onboarding.welcome.study")}
                     </strong>
 
                     <span>
-                        Construye y organiza tus líneas.
+                        {t("onboarding.welcome.studyDesc")}
                     </span>
                 </div>
 
@@ -276,11 +275,11 @@ function WelcomeStep() {
                     </span>
 
                     <strong>
-                        Analiza
+                        {t("onboarding.welcome.analyze")}
                     </strong>
 
                     <span>
-                        Comprueba tus ideas con Stockfish.
+                        {t("onboarding.welcome.analyzeDesc")}
                     </span>
                 </div>
 
@@ -299,11 +298,11 @@ function WelcomeStep() {
                     </span>
 
                     <strong>
-                        Entrena
+                        {t("onboarding.welcome.train")}
                     </strong>
 
                     <span>
-                        Practica tu repertorio posición a posición.
+                        {t("onboarding.welcome.trainDesc")}
                     </span>
                 </div>
             </div>
@@ -322,17 +321,15 @@ function LibraryStep() {
             </div>
 
             <span className="onboarding-eyebrow">
-                Tu biblioteca
+                {t("onboarding.library.title")}
             </span>
 
             <h1>
-                Organiza tu repertorio a tu manera.
+                {t("onboarding.library.heading")}
             </h1>
 
             <p className="onboarding-lead">
-                Crea carpetas y estudios para cada apertura,
-                variante o preparación. Después construye
-                las líneas directamente sobre el tablero.
+                {t("onboarding.library.description")}
             </p>
 
             <div className="onboarding-library-demo">
@@ -343,7 +340,7 @@ function LibraryStep() {
                     />
 
                     <strong>
-                        Repertorio
+                        {t("onboarding.library.rootLabel")}
                     </strong>
                 </div>
 
@@ -354,7 +351,7 @@ function LibraryStep() {
                     />
 
                     <span>
-                        Con blancas
+                        {t("onboarding.library.whiteSide")}
                     </span>
                 </div>
 
@@ -365,7 +362,7 @@ function LibraryStep() {
                     />
 
                     <span>
-                        Catalana
+                        {t("onboarding.library.catalanStudy")}
                     </span>
                 </div>
 
@@ -376,7 +373,7 @@ function LibraryStep() {
                     />
 
                     <span>
-                        Italiana
+                        {t("onboarding.library.italianStudy")}
                     </span>
                 </div>
 
@@ -387,7 +384,7 @@ function LibraryStep() {
                     />
 
                     <span>
-                        Con negras
+                        {t("onboarding.library.blackSide")}
                     </span>
                 </div>
 
@@ -398,7 +395,7 @@ function LibraryStep() {
                     />
 
                     <span>
-                        Siciliana Najdorf
+                        {t("onboarding.library.sicilianStudy")}
                     </span>
                 </div>
             </div>
@@ -411,12 +408,11 @@ function LibraryStep() {
 
                 <div>
                     <strong>
-                        ¿Ya tienes un repertorio?
+                        {t("onboarding.library.tip.title")}
                     </strong>
 
                     <span>
-                        También puedes importar tus archivos PGN
-                        y convertirlos directamente en estudios.
+                        {t("onboarding.library.tip.description")}
                     </span>
                 </div>
             </div>
@@ -435,17 +431,15 @@ function AnalysisStep() {
             </div>
 
             <span className="onboarding-eyebrow">
-                Editor y análisis
+                {t("onboarding.analysis.title")}
             </span>
 
             <h1>
-                Trabaja cada posición en profundidad.
+                {t("onboarding.analysis.heading")}
             </h1>
 
             <p className="onboarding-lead">
-                Navega por tu repertorio, crea variantes,
-                guarda tus ideas y utiliza Stockfish para
-                comprobar cada posición.
+                {t("onboarding.analysis.description")}
             </p>
 
             <div className="onboarding-capabilities">
@@ -456,11 +450,11 @@ function AnalysisStep() {
                     />
 
                     <strong>
-                        Variantes
+                        {t("onboarding.analysis.variants")}
                     </strong>
 
                     <span>
-                        Guarda diferentes respuestas desde una misma posición.
+                        {t("onboarding.analysis.variantsDesc")}
                     </span>
                 </div>
 
@@ -471,11 +465,11 @@ function AnalysisStep() {
                     />
 
                     <strong>
-                        Notas
+                        {t("onboarding.analysis.notes")}
                     </strong>
 
                     <span>
-                        Añade planes, ideas y recordatorios a tus movimientos.
+                        {t("onboarding.analysis.notesDesc")}
                     </span>
                 </div>
 
@@ -486,11 +480,11 @@ function AnalysisStep() {
                     />
 
                     <strong>
-                        Stockfish
+                        {t("onboarding.analysis.stockfish")}
                     </strong>
 
                     <span>
-                        Analiza la posición y compara las mejores líneas.
+                        {t("onboarding.analysis.stockfishDesc")}
                     </span>
                 </div>
 
@@ -501,18 +495,18 @@ function AnalysisStep() {
                     />
 
                     <strong>
-                        PGN
+                        {t("onboarding.analysis.pgn")}
                     </strong>
 
                     <span>
-                        Importa y exporta tus estudios cuando quieras.
+                        {t("onboarding.analysis.pgnDesc")}
                     </span>
                 </div>
             </div>
 
             <div className="onboarding-shortcut">
                 <span>
-                    Navegación rápida
+                    {t("onboarding.analysis.shortcuts")}
                 </span>
 
                 <div>
@@ -525,7 +519,7 @@ function AnalysisStep() {
                     </kbd>
 
                     <span>
-                        Muévete por la línea principal con las flechas del teclado.
+                        {t("onboarding.analysis.shortcutsDesc")}
                     </span>
                 </div>
             </div>
@@ -544,18 +538,15 @@ function TrainingStep() {
             </div>
 
             <span className="onboarding-eyebrow">
-                Entrenamiento
+                {t("onboarding.training.title")}
             </span>
 
             <h1>
-                No te limites a guardar tu repertorio.
-                Apréndelo.
+                {t("onboarding.training.heading")}
             </h1>
 
             <p className="onboarding-lead">
-                Crea un entrenamiento desde cualquier estudio
-                y Chessktop te mostrará posiciones de tu repertorio
-                para que encuentres el movimiento correcto.
+                {t("onboarding.training.description")}
             </p>
 
             <div className="onboarding-training-flow">
@@ -566,11 +557,11 @@ function TrainingStep() {
                     />
 
                     <strong>
-                        Posición
+                        {t("onboarding.training.position")}
                     </strong>
 
                     <span>
-                        Chessktop selecciona una posición de tu repertorio.
+                        {t("onboarding.training.positionDesc")}
                     </span>
                 </div>
 
@@ -586,11 +577,11 @@ function TrainingStep() {
                     />
 
                     <strong>
-                        Responde
+                        {t("onboarding.training.respond")}
                     </strong>
 
                     <span>
-                        Juega sobre el tablero el movimiento que recuerdes.
+                        {t("onboarding.training.respondDesc")}
                     </span>
                 </div>
 
@@ -606,23 +597,22 @@ function TrainingStep() {
                     />
 
                     <strong>
-                        Repasa
+                        {t("onboarding.training.review")}
                     </strong>
 
                     <span>
-                        Las posiciones problemáticas vuelven al final.
+                        {t("onboarding.training.reviewDesc")}
                     </span>
                 </div>
             </div>
 
             <div className="onboarding-final-message">
                 <strong>
-                    Ya estás listo.
+                    {t("onboarding.training.ready")}
                 </strong>
 
                 <span>
-                    Crea tu primer estudio o importa un PGN
-                    y empieza a construir tu repertorio.
+                    {t("onboarding.training.readyDesc")}
                 </span>
             </div>
         </div>
